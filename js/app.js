@@ -77,10 +77,65 @@ routes.home = () => {
       <h1>Bắp Học Vui</h1><p>Chuẩn bị vào lớp 1</p></div>
     <button class="big-card math" data-go="mathMenu"><span class="emoji">🔢</span><span>Toán</span><small>Cộng · Trừ · Cân thăng bằng</small></button>
     <button class="big-card viet" data-go="vietMenu"><span class="emoji">📚</span><span>Tiếng Việt</span><small>Chữ cái · Từ đơn · Từ ghép · Câu</small></button>
+    <button class="install-btn ${Install.isInstalled() ? "hidden" : ""}">📲 Cài app lên màn hình chính</button>
     <button class="link-btn" data-go="settings">⚙️ Cài đặt cho bố mẹ</button>
   </div>`));
   $app.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => { Sfx.tap(); go(b.dataset.go); }));
+  $app.querySelector(".install-btn").onclick = () => { Sfx.tap(); Install.run(); };
 };
+
+// =============================================================
+//  CÀI APP LÊN MÀN HÌNH CHÍNH
+//  Android/Chrome: hiện hộp "Cài đặt" của hệ thống.
+//  iPhone/Safari: Apple không cho web tự cài, nên hiện hướng dẫn 3 bước.
+// =============================================================
+const Install = (() => {
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferred = e; });
+  window.addEventListener("appinstalled", () => {
+    deferred = null;
+    document.querySelectorAll(".install-btn").forEach((b) => b.classList.add("hidden"));
+  });
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isInstalled = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+
+  function guide(title, steps) {
+    const el = h(`<div class="install-guide" role="dialog">
+      <div class="ig-box"><h2>${title}</h2>
+        <ol>${steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+        <button class="primary ig-close">Đã hiểu</button></div></div>`);
+    el.querySelector(".ig-close").onclick = () => el.remove();
+    el.onclick = (e) => { if (e.target === el) el.remove(); };
+    document.body.appendChild(el);
+  }
+
+  async function run() {
+    if (deferred) {
+      deferred.prompt();
+      try { await deferred.userChoice; } catch {}
+      deferred = null;
+      return;
+    }
+    if (isIOS()) {
+      const inSafari = /safari/i.test(navigator.userAgent) && !/crios|fxios|edgios/i.test(navigator.userAgent);
+      guide("Cài app trên iPhone / iPad", [
+        inSafari ? "Đang mở bằng <b>Safari</b> là đúng rồi 👍" : "Mở trang này bằng <b>Safari</b> (Apple chỉ cho cài từ Safari).",
+        'Bấm nút <b>Chia sẻ</b> <span class="ig-icon">⬆️</span> ở thanh dưới cùng.',
+        "Kéo xuống, chọn <b>Thêm vào MH chính</b> ➕.",
+        "Bấm <b>Thêm</b> ở góc trên bên phải. Biểu tượng 🌽 sẽ hiện ra!",
+      ]);
+      return;
+    }
+    guide("Cài app trên Android", [
+      "Mở trang này bằng <b>Chrome</b>.",
+      'Bấm nút <b>⋮</b> ở góc trên bên phải.',
+      "Chọn <b>Cài đặt ứng dụng</b> hoặc <b>Thêm vào màn hình chính</b>.",
+      "Bấm <b>Cài đặt</b>. Biểu tượng 🌽 sẽ hiện ra!",
+    ]);
+  }
+  return { run, isInstalled };
+})();
 
 // =============================================================
 //  TOÁN
