@@ -286,3 +286,4 @@ button:disabled { opacity: 0.4; cursor: default; }
 .syl .on { transition: all .15s; }
 .syl.hl-on .on { color: var(--red); background: var(--red-soft); border-radius: 10px; }
 .syl.hl-rh .rh { color: var(--blue); background: var(--blue-soft); border-radius: 10px; }
+.version { text-align: center; color: var(--muted); font-size: 14px; margin: 0; }
