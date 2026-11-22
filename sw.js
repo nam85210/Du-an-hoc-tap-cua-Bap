@@ -1,9 +1,9 @@
 // Lưu tạm các file để app mở được cả khi mạng yếu.
 // Mỗi lần sửa code, tăng số phiên bản này lên để điện thoại tải bản mới.
-const CACHE = "bap-hoc-vui-v2";
+const CACHE = "bap-hoc-vui-v3";
 const FILES = [
   "./", "./index.html", "./css/style.css", "./manifest.webmanifest",
-  "./js/data.js", "./js/vietnamese.js", "./js/speech.js", "./js/math.js", "./js/app.js",
+  "./js/data.js", "./js/vietnamese.js", "./js/speech.js", "./js/math.js", "./js/logic-scale.js", "./js/app.js",
   "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png",
 ];
 self.addEventListener("install", (e) => {
