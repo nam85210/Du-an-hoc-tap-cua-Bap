@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "7 · giọng đọc & loa đáp án"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "8 · micro chỉ hỏi 1 lần"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -412,8 +412,8 @@ routes.card = (key, index) => {
       <button class="act mic"><span>🎤</span>Bé đọc</button>
     </div>
     <div class="heard"></div>
-    <div class="parent-check hidden">
-      <p>Máy này chưa nghe được giọng nói. Bố mẹ chấm giúp bé nhé:</p>
+    <div class="parent-check ${Speech.canListen ? "hidden" : ""}">
+      <p>${Speech.hasRecognition && Speech.micOn ? "Máy chưa nghe được giọng nói." : "Bố mẹ nghe bé đọc rồi chấm nhé:"}</p>
       <button class="pc-ok">✓ Bé đọc đúng</button><button class="pc-no">✗ Chưa đúng</button>
     </div>
     <div class="nav">
@@ -749,7 +749,7 @@ routes.challengePlay = (practice) => {
         <button class="act mic"><span>🎤</span>Bé đọc</button>
       </div>
       <div class="heard"></div>
-      <div class="parent-check hidden"><p>Bố mẹ chấm giúp bé nhé:</p>
+      <div class="parent-check ${Speech.canListen ? "hidden" : ""}"><p>Bố mẹ chấm giúp bé nhé:</p>
         <button class="pc-ok">✓ Bé đọc đúng</button><button class="pc-no">✗ Chưa đúng</button></div>
       <button class="link-btn skip hidden">Câu tiếp theo ▶</button>
     </div>`;
@@ -842,8 +842,17 @@ routes.settings = () => {
       <label>Tốc độ đọc: <b class="rate-val"></b></label>
       <input type="range" class="rate" min="0.5" max="1.2" step="0.05">
       <button class="primary test-voice">Nghe thử</button></section>
-    <section><h3>🎤 Kiểm tra micro</h3>
-      <p class="note">${Speech.canListen ? "Máy hỗ trợ nhận giọng nói. Bấm nút rồi nói “con gà”." : "⚠️ Trình duyệt này chưa hỗ trợ nhận giọng nói. Hãy dùng Chrome (Android) hoặc Safari (iPhone, iOS 14.5+)."}</p>
+    <section><h3>🎤 Micro chấm đọc</h3>
+      <label class="switch-row"><input type="checkbox" id="mic-on" ${Speech.micOn ? "checked" : ""} ${Speech.hasRecognition ? "" : "disabled"}>
+        <span><b>Dùng micro để máy chấm bé đọc</b><br><small>Tắt đi thì app không hỏi micro nữa, bố mẹ nghe và bấm ✓ / ✗ để chấm.</small></span></label>
+      <details class="mic-help"><summary>📱 iPhone hỏi micro nhiều lần? Xem cách cho phép luôn</summary>
+        <ol>
+          <li>Mở <b>Cài đặt</b> của iPhone → <b>Safari</b> → kéo xuống mục <b>Cài đặt cho trang web</b> → <b>Micrô</b> → chọn <b>Cho phép</b>.</li>
+          <li>Cũng trong Cài đặt → <b>Quyền riêng tư & Bảo mật</b> → <b>Nhận dạng giọng nói</b> → bật cho <b>Safari</b> (hoặc Bắp Học Vui).</li>
+          <li>Khi app hỏi, bấm <b>Cho phép</b>. Từ bản này, mỗi lần mở app máy chỉ hỏi <b>một lần</b>.</li>
+          <li>Nếu vẫn bị hỏi mỗi lần mở app: đây là giới hạn của Apple với app thêm từ màn hình chính. Bạn có thể <b>tắt micro</b> ở trên để bố mẹ chấm, hoặc mở app bằng <b>tab Safari</b> (Safari nhớ quyền micro tốt hơn).</li>
+        </ol></details>
+      <p class="note">${Speech.hasRecognition ? "Bấm “Thử micro” rồi nói “con gà”." : "⚠️ Trình duyệt này chưa hỗ trợ nhận giọng nói. Hãy dùng Chrome (Android) hoặc Safari (iPhone, iOS 14.5+)."}</p>
       <button class="primary test-mic" ${Speech.canListen ? "" : "disabled"}>Thử micro</button>
       <p class="mic-result"></p></section>
     <section><h3>🏆 Thử thách mỗi ngày</h3>
@@ -869,6 +878,11 @@ routes.settings = () => {
   }
   fillVoices();
   setTimeout(fillVoices, 800);
+  const micToggle = wrap.querySelector("#mic-on");
+  micToggle.onchange = () => {
+    Speech.setMic(micToggle.checked);
+    wrap.querySelector(".test-mic").disabled = !Speech.canListen;
+  };
   wrap.querySelectorAll(".preset").forEach((el) => {
     el.querySelector(".try").onclick = () => Speech.previewPreset(el.dataset.id, "Chào bé Bắp! A, mờ, am, cờ, am, cam. Bé giỏi quá!");
     el.querySelector(".pick").onclick = () => {
