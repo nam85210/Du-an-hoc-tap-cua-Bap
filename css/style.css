@@ -379,3 +379,69 @@ button:disabled { opacity: 0.4; cursor: default; }
 .mic-help { background: var(--blue-soft); border-radius: 12px; padding: 8px 12px; font-size: 15px; }
 .mic-help summary { font-weight: 700; cursor: pointer; }
 .mic-help ol { padding-left: 20px; margin: 8px 0 0; line-height: 1.45; }
+
+/* ---------- Thanh công cụ dưới cùng ---------- */
+body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr);
+  background: var(--card); border-top: 1px solid #eadfcf; box-shadow: 0 -4px 14px rgba(61,44,30,.08);
+  padding: 6px max(8px, env(safe-area-inset-left)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-right));
+}
+.tab { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; border-radius: 16px; background: none; color: var(--muted); }
+.tab .t-icon { font-size: 26px; line-height: 1.1; filter: grayscale(.6); opacity: .75; }
+.tab .t-label { font-size: 13px; font-weight: 700; }
+.tab.on { color: var(--orange); background: #fff4c2; }
+.tab.on .t-icon { filter: none; opacity: 1; transform: scale(1.1); }
+
+/* ---------- Trang chính chỉ có thử thách ---------- */
+.home.only-challenge { min-height: calc(100vh - 140px); justify-content: center; gap: 26px; }
+.home.only-challenge .challenge-card { padding: 34px 20px; }
+.home.only-challenge .cc-icon { font-size: 96px; }
+.home.only-challenge .cc-title { font-size: 34px; }
+
+/* ---------- Ôn tập ---------- */
+.review { display: flex; flex-direction: column; gap: 18px; padding-top: 10px; }
+.review-card {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 16px; align-items: center;
+  text-align: left; padding: 26px 22px; border-radius: 28px; color: #fff; font-size: 32px; font-weight: 800; box-shadow: var(--shadow);
+}
+.review-card .emoji { grid-row: span 2; font-size: 64px; }
+.review-card small { font-size: 16px; font-weight: 500; }
+.review-card:active { transform: translateY(4px); box-shadow: none; }
+.review-card.math { background: linear-gradient(135deg, #4cc9f0, #4361ee); }
+.review-card.viet { background: linear-gradient(135deg, #ffb703, #fb8500); }
+
+/* ---------- Lọ thủy tinh ---------- */
+.reward { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.jar-wrap { display: flex; justify-content: center; padding-top: 20px; }
+.jar { width: 230px; position: relative; }
+.jar.wobble { animation: wobble .5s ease-in-out; }
+.jar-lid { width: 150px; height: 26px; margin: 0 auto; background: linear-gradient(#e0a96d, #b9783c); border-radius: 10px 10px 6px 6px; box-shadow: 0 3px 0 rgba(0,0,0,.12); }
+.jar-neck { width: 132px; height: 16px; margin: 0 auto; border: 5px solid rgba(110,170,205,.55); border-top: none; border-bottom: none; background: rgba(220,240,255,.35); }
+.jar-body {
+  position: relative; width: 230px; height: 250px; border: 5px solid rgba(110,170,205,.6); border-radius: 46px 46px 56px 56px;
+  background: linear-gradient(90deg, rgba(255,255,255,.75), rgba(214,238,255,.45) 45%, rgba(255,255,255,.3));
+  box-shadow: inset 0 -12px 22px rgba(110,170,205,.25), 0 8px 0 rgba(61,44,30,.08);
+}
+.jar-stars {
+  position: absolute; left: 10px; right: 10px; bottom: 26px; top: 10px;
+  display: flex; flex-wrap: wrap-reverse; align-content: flex-start; justify-content: center; gap: 2px 4px;
+}
+.jstar { font-size: 34px; line-height: 1.1; width: 38px; text-align: center; filter: drop-shadow(0 2px 1px rgba(0,0,0,.15)); }
+.jstar.drop { animation: starDrop 1.15s cubic-bezier(.35,0,.65,1) both; }
+.jar-shine { position: absolute; left: 22px; top: 18px; width: 18px; height: 150px; border-radius: 10px; background: rgba(255,255,255,.7); pointer-events: none; }
+.jar-label { position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%); background: var(--orange); color: #fff; font-weight: 800; font-size: 20px; padding: 2px 16px; border-radius: 14px; }
+.jar-count { margin: 18px 0 0; font-size: 20px; }
+.reward-box { background: #fff4c2; border-radius: 18px; padding: 12px 16px; font-size: 18px; width: 100%; }
+.ch-full-inline { color: var(--green); font-weight: 800; }
+.reward h3 { margin: 6px 0 0; }
+.center-col { align-items: center; }
+@keyframes starDrop {
+  0% { transform: translateY(-360px) rotate(-220deg) scale(1.4); opacity: 0; }
+  10% { opacity: 1; }
+  72% { transform: translateY(0) rotate(0) scale(1); }
+  84% { transform: translateY(-22px); }
+  100% { transform: translateY(0); }
+}
+@keyframes wobble { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+.finish .jar-wrap { padding-top: 40px; }
