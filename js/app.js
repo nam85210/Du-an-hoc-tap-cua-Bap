@@ -143,7 +143,9 @@ const Install = (() => {
 const MATH_MODES = [
   { id: "add", icon: "➕", title: "Phép cộng", sub: "Trong phạm vi 20" },
   { id: "sub", icon: "➖", title: "Phép trừ", sub: "Trong phạm vi 20" },
-  { id: "balance", icon: "⚖️", title: "Cân thăng bằng", sub: "Tìm số để 2 bên bằng nhau" },
+  { id: "balance", icon: "⚖️", title: "Cân số", sub: "Tìm số để 2 bên bằng nhau" },
+  { id: "logic", icon: "🍎", title: "Cân đồ vật", sub: "1 quả táo nặng bằng mấy quả cam?" },
+  { id: "kitchen", icon: "⏲️", title: "Cân đồng hồ", sub: "Cộng số cân của các đồ vật" },
   { id: "mix", icon: "🎲", title: "Trộn lẫn", sub: "Tất cả các dạng" },
 ];
 
@@ -203,6 +205,33 @@ function balanceSVG(q, picked) {
   </svg>`;
 }
 
+// ---------- Cân đồ vật / cân đồng hồ ----------
+const panItems = (side) => side.map(([e, c]) => Array.from({ length: c }, () => `<span class="it">${e}</span>`).join("")).join("");
+function logicScale(left, right, cls = "") {
+  return `<div class="lscale ${cls}"><div class="lpans"><div class="lpan">${left}</div><div class="lpan">${right}</div></div>
+    <div class="lbeam"></div><div class="lpost"></div></div>`;
+}
+function logicHTML(q) {
+  return `<p class="hint">Các cân dưới đây đều thăng bằng. Bé đếm và suy nghĩ nhé!</p>
+    <div class="lgivens">${q.givens.map(([l, r]) => logicScale(panItems(l), panItems(r))).join("")}</div>
+    <div class="lquestion">${logicScale(panItems(q.ask), '<span class="qmark">?</span>', "ask")}</div>
+    <p class="lq">${esc(q.question.charAt(0).toUpperCase() + q.question.slice(1))}</p>`;
+}
+function kitchenHTML(q) {
+  return `<p class="hint">Mỗi đồ vật nặng bấy nhiêu cân:</p>
+    <div class="kweights">${Object.entries(q.weights).map(([e, w]) => `<div class="kw"><span>${e}</span><b>${w}</b></div>`).join("")}</div>
+    <div class="kscale"><div class="ktop">${panItems(q.items)}</div><div class="kplate"></div>
+      <div class="kbody"><div class="kdial">?</div></div></div>
+    <p class="lq">Cân chỉ số mấy?</p>`;
+}
+function makeQuestion(mode, max) {
+  let m = mode;
+  if (m === "mix") m = pick(["add", "sub", "balance", "logic", "kitchen"]);
+  if (m === "logic") return LogicScale.next();
+  if (m === "kitchen") return LogicScale.kitchen();
+  return MathGen.make(m, max);
+}
+
 routes.mathPlay = (mode) => {
   const TOTAL = 10;
   let max = 10;
@@ -216,13 +245,13 @@ routes.mathPlay = (mode) => {
   function next() {
     if (n >= TOTAL) return finish();
     n++;
-    const q = MathGen.make(mode, max);
+    const q = makeQuestion(mode, max);
     let firstTry = true;
     body.innerHTML = `
       <div class="progress"><div style="width:${((n - 1) / TOTAL) * 100}%"></div></div>
       <div class="qcount">Câu ${n}/${TOTAL} · ⭐ ${score}</div>
       <div class="question">
-        ${q.kind === "balance"
+        ${q.kind === "logic" ? logicHTML(q) : q.kind === "kitchen" ? kitchenHTML(q) : q.kind === "balance"
           ? `<p class="hint">Bé chọn số để cân thăng bằng nhé!</p><div class="scale-box">${balanceSVG(q, null)}</div>`
           : `${mathVisual(q.visual)}<div class="equation">${q.text.map((t) => `<span class="${t === "?" ? "qbox" : ""}">${t}</span>`).join("")}</div>`}
         <button class="speak-btn small" aria-label="Nghe đề bài">🔊 Nghe đề</button>
@@ -240,6 +269,10 @@ routes.mathPlay = (mode) => {
         body.querySelectorAll(".ans").forEach((x) => (x.disabled = true));
         const eq = body.querySelector(".equation .qbox");
         if (eq) { eq.textContent = v; eq.classList.add("filled"); }
+        const qm = body.querySelector(".qmark");
+        if (qm) qm.outerHTML = panItems([[q.unit, v]]);
+        const dial = body.querySelector(".kdial");
+        if (dial) { dial.textContent = v; dial.classList.add("filled"); }
         Sfx.good();
         const msg = pick(MATH_PRAISES);
         showFeedback(true, msg);
@@ -325,6 +358,14 @@ routes.lesson = (key) => {
   $app.appendChild(grid);
 };
 
+// Tách tiếng thành phụ âm đầu + vần để tô màu khi đánh vần
+function sylParts(s) {
+  const a = VN.analyzeSyllable(s);
+  const n = a.onset.length;
+  if (!n) return `<span class="rh">${esc(s)}</span>`;
+  return `<span class="on">${esc(s.slice(0, n))}</span><span class="rh">${esc(s.slice(n))}</span>`;
+}
+
 // Thẻ học 1 từ: nghe – đánh vần – bé đọc – chấm
 routes.card = (key, index) => {
   const L = VIET_LESSONS[key];
@@ -339,7 +380,7 @@ routes.card = (key, index) => {
     <div class="word-row">
       <div class="syllables ${isSentence ? "sentence" : ""}">
         ${syls.map((s, i) => `<button class="syl" data-i="${i}" aria-label="Nghe tiếng ${esc(s)}">
-          <span class="syl-text">${esc(s)}</span><span class="syl-spk">🔊</span></button>`).join("")}
+          <span class="syl-text">${sylParts(s)}</span><span class="syl-spk">🔊</span></button>`).join("")}
       </div>
       <button class="speak-btn" aria-label="Nghe cả từ">🔊</button>
     </div>
@@ -382,9 +423,16 @@ routes.card = (key, index) => {
     const line = spellArea.querySelector(`.spell-line[data-i="${i}"]`);
     const steps = VN.spellSteps(syls[i]);
     const els = line ? [...line.querySelectorAll(".step")] : [];
+    const hasOnset = !!VN.analyzeSyllable(syls[i]).onset;
+    const chip = sylBtns[i];
     sylBtns.forEach((b, j) => b.classList.toggle("active", j === i));
-    await Speech.speakSteps(steps, (k) => els.forEach((e, j) => e.classList.toggle("hl", j === k)));
-    sylBtns.forEach((b) => b.classList.remove("active"));
+    // Bước 1: phụ âm đầu (sáng phần phụ âm) -> bước 2: vần -> ghép lại cả tiếng
+    await Speech.speakSteps(steps, (k) => {
+      els.forEach((e, j) => e.classList.toggle("hl", j === k));
+      chip.classList.toggle("hl-on", hasOnset && k === 0);
+      chip.classList.toggle("hl-rh", hasOnset && k === 1);
+    });
+    sylBtns.forEach((b) => b.classList.remove("active", "hl-on", "hl-rh"));
   }
 
   async function spellAll() {
@@ -410,11 +458,10 @@ routes.card = (key, index) => {
     await Speech.speak(item.w);
     sylBtns.forEach((b) => b.classList.remove("active"));
   };
-  // 🔊 từng tiếng: đọc tiếng đó + đánh vần
+  // 🔊 từng tiếng: đánh vần từ phụ âm đầu rồi ghép lại (bờ – a – ba – huyền – bà)
   sylBtns.forEach((b, i) => (b.onclick = async () => {
     if (busy) return; busy = true;
-    await Speech.speak(syls[i]);
-    if (!isSentence) await spellSyllable(i);
+    await spellSyllable(i);
     busy = false;
   }));
   card.querySelector(".spell").onclick = spellAll;
