@@ -39,14 +39,16 @@ const VN = (() => {
       } else plain += ch;
     }
     let onset = "", onsetName = "";
+    // "gi" trước phụ âm (gìn, gì): phụ âm đầu là "gi", vần bắt đầu bằng "i"
+    const giBeforeConsonant = /^gi[^aăâeêioôơuưy]*$/.test(plain) || /^gi[bcdđghklmnpqrstvx]/.test(plain);
     for (const [o, name] of ONSETS) {
+      if (giBeforeConsonant) { onset = "gi"; onsetName = "giờ"; break; }
       if (plain.startsWith(o) && plain.length > o.length) {
         onset = o; onsetName = name; break;
       }
     }
     // "gi" đứng một mình (vd: "gì") -> gi + i
-    let rhyme = plain.slice(onset.length);
-    if (!onset && plain === "gi") { onset = "gi"; onsetName = "giờ"; rhyme = "i"; }
+    let rhyme = giBeforeConsonant ? "i" + plain.slice(2) : plain.slice(onset.length);
     return { word: syl, onset, onsetName, rhyme, tone, toneName: TONE_NAMES[tone], plain };
   }
 
@@ -56,8 +58,13 @@ const VN = (() => {
     ["p", "pờ"], ["t", "tờ"], ["i", "i"], ["y", "i"], ["o", "o"], ["u", "u"],
   ];
   // Cách đọc một nguyên âm đứng riêng
-  const VOWEL_SAY = { a: "a", "ă": "á", "â": "ớ", e: "e", "ê": "ê", i: "i", o: "o", "ô": "ô", "ơ": "ơ", u: "u", "ư": "ư", y: "i" };
-  const sayChunk = (c) => (c.length === 1 && VOWEL_SAY[c]) || c;
+  // Cách đọc một nguyên âm đứng riêng.
+  // "ă", "â" để nguyên chữ cái: giọng đọc sẽ đọc đúng tên chữ (á, ớ).
+  // Nếu đưa "á"/"ớ" thì máy đọc tách thành "a sắc"/"ơ sắc" -> sai.
+  const VOWEL_SAY = { a: "a", "ă": "ă", "â": "â", e: "e", "ê": "ê", i: "i", o: "o", "ô": "ô", "ơ": "ơ", u: "u", "ư": "ư", y: "i" };
+  // Nguyên âm đôi đọc theo cách dạy lớp 1: iê/yê -> "ia", uô -> "ua", ươ -> "ưa"
+  const DIPHTHONG_SAY = { "iê": "ia", "yê": "ia", "uô": "ua", "ươ": "ưa" };
+  const sayChunk = (c) => (c.length === 1 && VOWEL_SAY[c]) || DIPHTHONG_SAY[c] || c;
 
   /** Tách vần: "am" -> ["a", "mờ"], "uôi" -> ["uô", "i"], "oa" -> ["o", "a"], "a" -> [] */
   function splitRhyme(rhyme) {
