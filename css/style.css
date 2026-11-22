@@ -373,3 +373,9 @@ button:disabled { opacity: 0.4; cursor: default; }
 .preset .pick span { font-size: 28px; }
 .preset.on .pick { border-color: var(--orange); background: #fff4c2; }
 .preset .try { width: 52px; border-radius: 14px; background: var(--yellow); font-size: 22px; }
+.switch-row { display: flex; gap: 12px; align-items: flex-start; font-size: 16px; }
+.switch-row input { width: 26px; height: 26px; margin-top: 2px; accent-color: var(--green); flex: none; }
+.switch-row small { color: var(--muted); }
+.mic-help { background: var(--blue-soft); border-radius: 12px; padding: 8px 12px; font-size: 15px; }
+.mic-help summary { font-weight: 700; cursor: pointer; }
+.mic-help ol { padding-left: 20px; margin: 8px 0 0; line-height: 1.45; }

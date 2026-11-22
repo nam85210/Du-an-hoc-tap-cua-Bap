@@ -86,16 +86,27 @@ const Speech = (() => {
    * Lỗi: reject(Error) với message là mã lỗi: not-supported, not-allowed, no-speech, network...
    */
   let active = null;
+  // Dùng lại MỘT bộ nhận giọng nói cho cả buổi học: máy chỉ hỏi quyền micro lần đầu,
+  // không hỏi lại mỗi lần bé bấm 🎤
+  let shared = null;
+  function getRecognizer() {
+    if (!shared) {
+      shared = new Recognition();
+      shared.lang = "vi-VN";
+      shared.interimResults = false;
+      shared.continuous = false;
+      shared.maxAlternatives = 5;
+    }
+    return shared;
+  }
   function listen() {
     return new Promise((resolve, reject) => {
       if (!Recognition) return reject(new Error("not-supported"));
+      if (settings.mic === false) return reject(new Error("mic-off"));
       stop();
-      const rec = new Recognition();
+      if (active) { try { active.abort(); } catch {} }
+      const rec = getRecognizer();
       active = rec;
-      rec.lang = "vi-VN";
-      rec.interimResults = false;
-      rec.continuous = false;
-      rec.maxAlternatives = 5;
       let results = null;
       let error = null;
       rec.onresult = (e) => {
@@ -113,7 +124,13 @@ const Speech = (() => {
         else reject(new Error(error || "no-speech"));
       };
       rec.onend = finish;
-      try { rec.start(); } catch (err) { settled = true; return reject(new Error("start-failed")); }
+      try { rec.start(); } catch (err) {
+        // bộ nhận đang bận: tạo bộ mới rồi thử lại một lần
+        shared = null;
+        const r2 = getRecognizer();
+        r2.onresult = rec.onresult; r2.onerror = rec.onerror; r2.onend = rec.onend; active = r2;
+        try { r2.start(); } catch { settled = true; return reject(new Error("start-failed")); }
+      }
       // tối đa 8 giây nghe; nếu máy không báo kết thúc thì tự dừng sau 10 giây
       setTimeout(() => { try { rec.stop(); } catch {} }, 8000);
       setTimeout(finish, 10000);
@@ -124,7 +141,10 @@ const Speech = (() => {
   return {
     speak, speakSteps, stop, listen, stopListening,
     get canSpeak() { return !!synth; },
-    get canListen() { return !!Recognition; },
+    get canListen() { return !!Recognition && settings.mic !== false; },
+    get hasRecognition() { return !!Recognition; },
+    get micOn() { return settings.mic !== false; },
+    setMic(on) { settings.mic = !!on; saveSettings(); },
     get voices() { refreshVoices(); return voices; },
     get settings() { return settings; },
     setRate(r) { settings.rate = r; saveSettings(); },
