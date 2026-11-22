@@ -421,16 +421,16 @@ routes.card = (key, index) => {
   async function spellSyllable(i) {
     drawSpelling(isSentence ? i : null);
     const line = spellArea.querySelector(`.spell-line[data-i="${i}"]`);
-    const steps = VN.spellSteps(syls[i]);
+    const plan = VN.spellPlan(syls[i]);
     const els = line ? [...line.querySelectorAll(".step")] : [];
-    const hasOnset = !!VN.analyzeSyllable(syls[i]).onset;
     const chip = sylBtns[i];
     sylBtns.forEach((b, j) => b.classList.toggle("active", j === i));
-    // Bước 1: phụ âm đầu (sáng phần phụ âm) -> bước 2: vần -> ghép lại cả tiếng
-    await Speech.speakSteps(steps, (k) => {
+    // Đánh vần vần trước (sáng xanh), rồi phụ âm (sáng đỏ), rồi ghép cả tiếng: a – mờ – am – cờ – am – cam
+    await Speech.speakSteps(plan.map((p) => p.say), (k) => {
       els.forEach((e, j) => e.classList.toggle("hl", j === k));
-      chip.classList.toggle("hl-on", hasOnset && k === 0);
-      chip.classList.toggle("hl-rh", hasOnset && k === 1);
+      const part = k >= 0 ? plan[k].part : "";
+      chip.classList.toggle("hl-on", part === "on");
+      chip.classList.toggle("hl-rh", part === "rh");
     });
     sylBtns.forEach((b) => b.classList.remove("active", "hl-on", "hl-rh"));
   }
@@ -458,7 +458,7 @@ routes.card = (key, index) => {
     await Speech.speak(item.w);
     sylBtns.forEach((b) => b.classList.remove("active"));
   };
-  // 🔊 từng tiếng: đánh vần từ phụ âm đầu rồi ghép lại (bờ – a – ba – huyền – bà)
+  // 🔊 từng tiếng: đánh vần vần trước rồi ghép phụ âm (a – mờ – am – cờ – am – cam)
   sylBtns.forEach((b, i) => (b.onclick = async () => {
     if (busy) return; busy = true;
     await spellSyllable(i);

@@ -32,8 +32,8 @@ mở toàn màn hình như ứng dụng thật. Không cần lên CH Play / App 
 3. **🔊 Loa lớn** bên cạnh: đọc cả từ.
 4. **Dòng đánh vần** theo cách dạy lớp 1, ví dụ:
    - `bà` → **bờ – a – ba – huyền – bà**
-   - `cam` → **cờ – am – cam**
-   - `con gà` → **cờ – on – con** / **gờ – a – ga – huyền – gà**
+   - `cam` → **a – mờ – am – cờ – am – cam** (đánh vần vần trước, rồi ghép phụ âm)
+   - `con gà` → **o – nờ – on – cờ – on – con** / **gờ – a – ga – huyền – gà**
 5. **🐢 Đánh vần**: máy đánh vần chậm, chữ đang đọc sáng lên màu vàng.
 6. **🎤 Bé đọc**: máy lắng nghe bé đọc rồi chấm:
    - ✅ **Đúng** → dấu tích xanh, khen bé, pháo hoa, bé được ⭐.
