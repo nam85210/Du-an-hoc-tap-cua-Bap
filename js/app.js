@@ -2,6 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
+const APP_VERSION = "5 · đánh vần vần trước"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -79,6 +80,7 @@ routes.home = () => {
     <button class="big-card viet" data-go="vietMenu"><span class="emoji">📚</span><span>Tiếng Việt</span><small>Chữ cái · Từ đơn · Từ ghép · Câu</small></button>
     <button class="install-btn ${Install.isInstalled() ? "hidden" : ""}">📲 Cài app lên màn hình chính</button>
     <button class="link-btn" data-go="settings">⚙️ Cài đặt cho bố mẹ</button>
+    <p class="version">Phiên bản ${APP_VERSION}</p>
   </div>`));
   $app.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => { Sfx.tap(); go(b.dataset.go); }));
   $app.querySelector(".install-btn").onclick = () => { Sfx.tap(); Install.run(); };
@@ -610,5 +612,17 @@ history.replaceState({ name: "home", args: [] }, "", "#home");
 render("home");
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-  navigator.serviceWorker.register("sw.js").catch(() => {});
+  // Có bản mới thì tự tải lại trang một lần
+  let reloaded = false;
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadController && !reloaded) { reloaded = true; location.reload(); }
+  });
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" })
+    .then((reg) => {
+      reg.update().catch(() => {});
+      // kiểm tra bản mới mỗi khi bé mở lại app
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) reg.update().catch(() => {}); });
+    })
+    .catch(() => {});
 }
