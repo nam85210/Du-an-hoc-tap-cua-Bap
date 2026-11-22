@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "6 · thử thách mỗi ngày"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "7 · giọng đọc & loa đáp án"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -277,7 +277,8 @@ routes.mathPlay = (mode) => {
           : `${mathVisual(q.visual)}<div class="equation">${q.text.map((t) => `<span class="${t === "?" ? "qbox" : ""}">${t}</span>`).join("")}</div>`}
         <button class="speak-btn small" aria-label="Nghe đề bài">🔊 Nghe đề</button>
       </div>
-      <div class="answers">${q.options.map((o) => `<button class="ans" data-v="${o}">${o}</button>`).join("")}</div>`;
+      <div class="answers">${answerButtons(q.options)}</div>`;
+    bindAnswerSpeakers(body, q, null);
     const say = () => Speech.speak(q.say);
     body.querySelector(".speak-btn").onclick = say;
     say();
@@ -578,6 +579,41 @@ routes.card = (key, index) => {
   setTimeout(() => card.querySelector(".speak-btn").click(), 400);
 };
 
+// ---------- Loa đáp án & đánh vần dùng chung ----------
+/** Đánh vần cả một từ, hiện dòng đánh vần vào khung `area` (nếu có) */
+async function spellWord(word, area) {
+  for (const syl of VN.syllables(word)) {
+    const plan = VN.spellPlan(syl);
+    if (area) area.innerHTML = `<div class="spell-line">${plan.map((p) => `<span class="step">${esc(p.show)}</span>`).join('<span class="dash">–</span>')}</div>`;
+    const els = area ? [...area.querySelectorAll(".step")] : [];
+    await Speech.speakSteps(plan.map((p) => p.say), (k) => els.forEach((e, j) => e.classList.toggle("hl", j === k)));
+  }
+  if (VN.syllables(word).length > 1) await Speech.speak(word);
+}
+/** Câu đọc cho một đáp án */
+function optionSpeech(q, v) {
+  if (q.kind === "vletter") return VN.analyzeSyllable(v + "a").onsetName || v;
+  if (q.kind === "logic") return `${v} ${LogicScale.name(q.unit)}`;
+  if (q.kind === "kitchen") return `${v} cân`;
+  return String(v);
+}
+/** Nút đáp án kèm loa nhỏ */
+function answerButtons(opts, extraCls = "") {
+  return opts.map((o) => `<div class="ans-wrap"><button class="ans ${extraCls}" data-v="${esc(o)}">${esc(o)}</button>
+    <button class="ans-spk" data-v="${esc(o)}" aria-label="Nghe đáp án ${esc(o)}">🔊</button></div>`).join("");
+}
+/** Gắn loa cho đáp án: chữ thì đọc + đánh vần, số thì đọc số */
+function bindAnswerSpeakers(root, q, area) {
+  root.querySelectorAll(".ans-spk").forEach((b) => (b.onclick = async (e) => {
+    e.stopPropagation();
+    const v = b.dataset.v;
+    b.classList.add("playing");
+    if (q.kind === "vpic" || q.kind === "vlisten") { await Speech.speak(v); await spellWord(v, area); }
+    else await Speech.speak(optionSpeech(q, v));
+    b.classList.remove("playing");
+  }));
+}
+
 // =============================================================
 //  THỬ THÁCH MỖI NGÀY
 // =============================================================
@@ -669,9 +705,13 @@ routes.challengePlay = (practice) => {
   // Câu chọn đáp án (Toán và các dạng Tiếng Việt có lựa chọn)
   function choice(q, inner, opts, isRight, onPick) {
     let first = true;
+    const isViet = q.kind.startsWith("v");
     body.innerHTML = `${header()}<div class="question">${inner}
+      ${isViet ? '<div class="spell-area q-spell"></div>' : ""}
       <button class="speak-btn small">🔊 Nghe đề</button></div>
-      <div class="answers ${q.kind.startsWith("v") ? "words" : ""}">${opts.map((o) => `<button class="ans" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+      <div class="answers ${isViet ? "words" : ""}">${answerButtons(opts)}</div>`;
+    const area = body.querySelector(".q-spell");
+    bindAnswerSpeakers(body, q, area);
     const say = () => Speech.speak(q.say);
     body.querySelector(".speak-btn").onclick = say;
     say();
@@ -681,9 +721,12 @@ routes.challengePlay = (practice) => {
       if (onPick) onPick(v, ok);
       if (ok) {
         b.classList.add("right");
-        body.querySelectorAll(".ans").forEach((x) => (x.disabled = true));
+        body.querySelectorAll(".ans, .ans-spk").forEach((x) => (x.disabled = true));
         praise();
-        setTimeout(() => nextQ(first), 2200);
+        if (isViet) {
+          // Đọc đúng rồi thì cùng đánh vần lại chữ đó cho nhớ
+          setTimeout(async () => { await spellWord(q.word, area); setTimeout(() => nextQ(first), 600); }, 1900);
+        } else setTimeout(() => nextQ(first), 2200);
       } else {
         first = false;
         b.classList.add("wrong"); b.disabled = true;
@@ -699,9 +742,10 @@ routes.challengePlay = (practice) => {
       <p class="hint">Bé đọc to chữ này nhé!</p>
       <div class="pic small">${q.e}</div>
       <div class="syllables">${VN.syllables(q.word).map((s) => `<span class="syl static">${sylParts(s)}</span>`).join("")}</div>
-      <div class="spell-area"></div>
-      <div class="actions">
-        <button class="act listen"><span>🔊</span>Nghe cô đọc</button>
+      <div class="spell-area">${VN.syllables(q.word).map((s) => `<div class="spell-line">${VN.spellPlan(s).map((p) => `<span class="step">${esc(p.show)}</span>`).join('<span class="dash">–</span>')}</div>`).join("")}</div>
+      <div class="actions three">
+        <button class="act listen"><span>🔊</span>Nghe</button>
+        <button class="act spell"><span>🐢</span>Đánh vần</button>
         <button class="act mic"><span>🎤</span>Bé đọc</button>
       </div>
       <div class="heard"></div>
@@ -712,17 +756,13 @@ routes.challengePlay = (practice) => {
     const mic = body.querySelector(".mic"), heard = body.querySelector(".heard");
     const spellArea = body.querySelector(".spell-area");
     body.querySelector(".listen").onclick = () => Speech.speak(q.word);
+    body.querySelector(".spell").onclick = () => spellWord(q.word, spellArea);
     const right = () => { praise(); setTimeout(() => nextQ(tries === 0), 2200); };
     const wrong = async (msg) => {
       tries++;
       await oops(msg);
       // đánh vần lại cho bé
-      for (const s of VN.syllables(q.word)) {
-        const plan = VN.spellPlan(s);
-        spellArea.innerHTML = `<div class="spell-line">${plan.map((p) => `<span class="step">${esc(p.show)}</span>`).join('<span class="dash">–</span>')}</div>`;
-        const els = [...spellArea.querySelectorAll(".step")];
-        await Speech.speakSteps(plan.map((p) => p.say), (k) => els.forEach((e, j) => e.classList.toggle("hl", j === k)));
-      }
+      await spellWord(q.word, spellArea);
       if (tries >= 2) body.querySelector(".skip").classList.remove("hidden");
       Speech.speak("Bé đọc lại nhé!");
     };
@@ -792,7 +832,11 @@ routes.challengePlay = (practice) => {
 routes.settings = () => {
   $app.appendChild(topbar("Cài đặt cho bố mẹ"));
   const wrap = h(`<div class="settings">
-    <section><h3>🗣️ Giọng đọc tiếng Việt</h3>
+    <section><h3>👩 Kiểu giọng đọc</h3>
+      <div class="presets">${Speech.PRESETS.map((p) => `<div class="preset ${Speech.settings.preset === p.id ? "on" : ""}" data-id="${p.id}">
+        <button class="pick"><span>${p.icon}</span>${p.name}</button><button class="try" aria-label="Nghe thử">🔊</button></div>`).join("")}</div>
+      <p class="note">Bấm 🔊 để nghe thử, bấm tên giọng để chọn.</p></section>
+    <section><h3>🗣️ Giọng đọc tiếng Việt của máy</h3>
       <select class="voice"></select>
       <p class="note voice-note"></p>
       <label>Tốc độ đọc: <b class="rate-val"></b></label>
@@ -820,11 +864,20 @@ routes.settings = () => {
     const vs = Speech.voices;
     sel.innerHTML = vs.length ? vs.map((v) => `<option value="${esc(v.voiceURI)}" ${v.voiceURI === Speech.settings.voiceURI ? "selected" : ""}>${esc(v.name)}</option>`).join("")
       : `<option>Mặc định (vi-VN)</option>`;
-    wrap.querySelector(".voice-note").textContent = vs.length ? `Tìm thấy ${vs.length} giọng tiếng Việt.`
+    wrap.querySelector(".voice-note").textContent = vs.length ? `Máy có ${vs.length} giọng tiếng Việt, đang dùng: ${Speech.currentVoiceName}. Muốn thêm giọng nữ hay hơn: iPhone vào Cài đặt › Trợ năng › Nội dung được đọc › Giọng nói › Tiếng Việt và tải giọng Linh (bản Nâng cao nếu có). Android vào Cài đặt › Chuyển văn bản thành giọng nói › Công cụ của Google › Tiếng Việt › chọn giọng nữ.`
       : "⚠️ Chưa thấy giọng tiếng Việt. Android: Cài đặt › Ngôn ngữ › Chuyển văn bản thành giọng nói › tải Tiếng Việt. iPhone: Cài đặt › Trợ năng › Nội dung được đọc › Giọng nói › Tiếng Việt.";
   }
   fillVoices();
   setTimeout(fillVoices, 800);
+  wrap.querySelectorAll(".preset").forEach((el) => {
+    el.querySelector(".try").onclick = () => Speech.previewPreset(el.dataset.id, "Chào bé Bắp! A, mờ, am, cờ, am, cam. Bé giỏi quá!");
+    el.querySelector(".pick").onclick = () => {
+      Speech.setPreset(el.dataset.id);
+      wrap.querySelectorAll(".preset").forEach((x) => x.classList.toggle("on", x === el));
+      rate.value = Speech.settings.rate; rv.textContent = Speech.settings.rate;
+      Speech.speak("Bé học cùng mình nhé!");
+    };
+  });
   sel.onchange = () => Speech.setVoice(sel.value);
   const rate = wrap.querySelector(".rate"), rv = wrap.querySelector(".rate-val");
   rate.value = Speech.settings.rate; rv.textContent = Speech.settings.rate;
