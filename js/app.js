@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "8 · micro chỉ hỏi 1 lần"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "9 · thanh công cụ & lọ sao"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -25,10 +25,37 @@ function go(name, ...args) {
   history.pushState({ name, args }, "", "#" + name);
   render(name, args);
 }
+// Thanh công cụ dưới cùng (từ trái sang phải)
+const TABS = [
+  { id: "home", icon: "🏠", label: "Trang chính" },
+  { id: "review", icon: "📖", label: "Ôn tập" },
+  { id: "reward", icon: "🫙", label: "Phần thưởng" },
+  { id: "settings", icon: "⚙️", label: "Cài đặt" },
+];
 function render(name, args = []) {
   $app.innerHTML = "";
-  (routes[name] || routes.home)(...args);
+  document.querySelectorAll(".tabbar").forEach((t) => t.remove());
+  if (!routes[name]) name = "home";
+  routes[name](...args);
+  const isTab = TABS.some((t) => t.id === name);
+  document.body.classList.toggle("has-tabs", isTab);
+  if (isTab) document.body.appendChild(tabbar(name));
   window.scrollTo(0, 0);
+}
+function tabbar(active) {
+  const el = h(`<nav class="tabbar">${TABS.map((t) => `<button class="tab ${t.id === active ? "on" : ""}" data-tab="${t.id}">
+    <span class="t-icon">${t.icon}</span><span class="t-label">${t.label}</span></button>`).join("")}</nav>`);
+  el.querySelectorAll(".tab").forEach((b) => (b.onclick = () => {
+    if (b.dataset.tab === active) return;
+    Sfx.tap(); Speech.stop(); Speech.stopListening();
+    // chuyển tab không chồng thêm lịch sử
+    history.replaceState({ name: b.dataset.tab, args: [] }, "", "#" + b.dataset.tab);
+    render(b.dataset.tab);
+  }));
+  return el;
+}
+function tabHeader(title) {
+  return h(`<header class="topbar"><span class="spacer"></span><h1>${esc(title)}</h1><span class="spacer"></span></header>`);
 }
 window.addEventListener("popstate", (e) => {
   Speech.stop(); Speech.stopListening();
@@ -73,20 +100,25 @@ function confetti() {
 //  TRANG CHỦ
 // =============================================================
 routes.home = () => {
-  $app.appendChild(h(`<div class="home">
+  $app.appendChild(h(`<div class="home only-challenge">
     <div class="hero small"><div class="mascot">🌽</div>
       <h1>Bắp Học Vui</h1><p>Chuẩn bị vào lớp 1</p></div>
     ${challengeCardHTML()}
-    <div class="subject-row">
-      <button class="sub-card math" data-go="mathMenu"><span class="emoji">🔢</span><span>Toán</span></button>
-      <button class="sub-card viet" data-go="vietMenu"><span class="emoji">📚</span><span>Tiếng Việt</span></button>
-    </div>
-    <button class="install-btn ${Install.isInstalled() ? "hidden" : ""}">📲 Cài app lên màn hình chính</button>
-    <button class="link-btn" data-go="settings">⚙️ Cài đặt cho bố mẹ</button>
-    <p class="version">Phiên bản ${APP_VERSION}</p>
+  </div>`));
+  $app.querySelector(".challenge-card").onclick = () => { Sfx.tap(); startChallenge(); };
+};
+
+// =============================================================
+//  ÔN TẬP: chọn Toán hoặc Tiếng Việt
+// =============================================================
+routes.review = () => {
+  $app.appendChild(tabHeader("Ôn tập"));
+  $app.appendChild(h(`<div class="review">
+    <p class="hint center">Bé muốn ôn môn nào?</p>
+    <button class="review-card math" data-go="mathMenu"><span class="emoji">🔢</span><span>Toán</span><small>Cộng · Trừ · Cân thăng bằng</small></button>
+    <button class="review-card viet" data-go="vietMenu"><span class="emoji">📚</span><span>Tiếng Việt</span><small>Chữ cái · Từ đơn · Từ ghép · Câu</small></button>
   </div>`));
   $app.querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => { Sfx.tap(); go(b.dataset.go); }));
-  $app.querySelector(".install-btn").onclick = () => { Sfx.tap(); Install.run(); };
 };
 
 // =============================================================
@@ -626,60 +658,64 @@ function weekStrip() {
   return `<div class="week">${Challenge.week().map((d) => `<div class="wd ${d.done ? "done" : ""} ${d.isToday ? "today" : ""} ${d.future ? "future" : ""}">
     <span>${d.name}</span><b>${d.done ? "⭐" : d.isToday ? "?" : "·"}</b><small>${d.date}</small></div>`).join("")}</div>`;
 }
+/** Lọ thủy tinh đựng sao. drop = true: ngôi sao cuối cùng rơi từ trên xuống */
+function jarHTML(n, drop = false) {
+  const stars = Array.from({ length: n }, (_, i) =>
+    `<span class="jstar ${drop && i === n - 1 ? "drop" : ""}">⭐</span>`).join("");
+  return `<div class="jar-wrap">
+    <div class="jar">
+      <div class="jar-lid"></div><div class="jar-neck"></div>
+      <div class="jar-body"><div class="jar-stars">${stars}</div><div class="jar-shine"></div>
+        <div class="jar-label">${n}/${Challenge.GOAL}</div></div>
+    </div></div>`;
+}
+function playJarDrop(root) {
+  const s = root.querySelector(".jstar.drop");
+  if (!s) return;
+  setTimeout(() => { Sfx.good(); root.querySelector(".jar").classList.add("wobble"); confetti(); }, 1050);
+}
+
+routes.reward = (drop = false) => {
+  $app.appendChild(tabHeader("Phần thưởng"));
+  const n = Challenge.stars, G = Challenge.GOAL, full = n >= G;
+  const wrap = h(`<div class="reward">
+    ${jarHTML(n, drop)}
+    <p class="jar-count">Bé đã có <b>${n}</b> ngôi sao${full ? "!" : ` · còn <b>${G - n}</b> sao nữa`}</p>
+    <div class="reward-box">🎁 Đủ ${G} sao bé được: <b>${esc(Challenge.reward)}</b>
+      ${full ? `<br><span class="ch-full-inline">🎉 Bé đã đủ sao! Nhận thưởng vào thứ 7 (${Challenge.rewardDayText}) nhé!</span>` : ""}</div>
+    <h3>Tuần này (Thứ 7 → Thứ 6)</h3>
+    ${weekStrip()}
+    ${!Challenge.canEarn() && !full ? `<p class="ch-done">Vòng mới bắt đầu tính sao từ thứ 7 (${Challenge.roundStartText}).</p>` : ""}
+    <p class="hint center">Mỗi ngày làm xong thử thách, bé được thả 1 ngôi sao vào lọ.</p>
+  </div>`);
+  $app.appendChild(wrap);
+  if (drop) playJarDrop(wrap);
+  else if (full) confetti();
+};
+
+/** Bấm nút thử thách ở Trang chính */
+function startChallenge() {
+  const full = Challenge.stars >= Challenge.GOAL;
+  if (Challenge.doneToday()) { history.replaceState({ name: "reward", args: [] }, "", "#reward"); return render("reward"); }
+  if (full || !Challenge.canEarn()) return go("challengePlay", true);
+  go("challengePlay", false);
+}
+
 function challengeCardHTML() {
   const done = Challenge.doneToday();
-  const label = done ? "Hôm nay bé đã xong! ✓" : !Challenge.canEarn() ? `Vòng mới từ thứ 7 (${Challenge.roundStartText})` : Challenge.inProgress ? `Tiếp tục thử thách (câu ${Challenge.today().idx + 1}/${Challenge.TOTAL})` : "Bắt đầu thử thách";
+  const full = Challenge.stars >= Challenge.GOAL;
+  const label = done ? "Hôm nay bé đã xong! ✓" : full ? "Luyện thêm" : !Challenge.canEarn() ? "Luyện thêm" : Challenge.inProgress ? `Tiếp tục thử thách (câu ${Challenge.today().idx + 1}/${Challenge.TOTAL})` : "Bắt đầu thử thách";
+  const sub = done ? "Bấm để xem lọ sao của bé 🫙" : !Challenge.canEarn() && !full ? `Vòng mới tính sao từ thứ 7 (${Challenge.roundStartText})` : "20 câu Toán + Tiếng Việt · xong được 1 ⭐";
   return `<button class="challenge-card ${done ? "done" : ""}" data-go="challenge">
     <span class="cc-icon">🏆</span>
     <span class="cc-title">${label}</span>
-    <span class="cc-sub">20 câu Toán + Tiếng Việt · xong được 1 ⭐</span>
-    ${starBar()}
+    <span class="cc-sub">${sub}</span>
   </button>`;
 }
 
-routes.challenge = () => {
-  $app.appendChild(topbar("Thử thách mỗi ngày"));
-  const done = Challenge.doneToday();
-  const full = Challenge.stars >= Challenge.GOAL;
-  const wrap = h(`<div class="ch-intro">
-    <div class="ch-trophy">${full ? "🎁" : "🏆"}</div>
-    ${starBar()}
-    <p class="ch-reward">Đủ ${Challenge.GOAL} sao bé được: <b>${esc(Challenge.reward)}</b></p>
-    <h3>Tuần này (Thứ 7 → Thứ 6)</h3>
-    ${weekStrip()}
-    <div class="ch-actions"></div>
-    <p class="hint center">Mỗi ngày 20 câu: 10 câu Toán, 10 câu Tiếng Việt.<br>Làm xong được 1 ngôi sao (mỗi ngày 1 sao).<br>Tuần thử thách tính từ thứ 7, đủ sao thì nhận thưởng vào thứ 7 để bé đi chơi được.</p>
-  </div>`);
-  const actions = wrap.querySelector(".ch-actions");
-  if (full) {
-    actions.appendChild(h(`<div class="ch-full">🎉 Bé đã đủ ${Challenge.GOAL} sao!<br>Bé nhận thưởng vào <b>thứ 7 (${Challenge.rewardDayText})</b> nhé!</div>`));
-  }
-  if (!Challenge.canEarn() && !full) {
-    actions.appendChild(h(`<div class="ch-done">Vòng thử thách mới bắt đầu từ <b>thứ 7 (${Challenge.roundStartText})</b>. Trước đó bé vẫn luyện thêm được nhé!</div>`));
-    const b = h(`<button class="primary big-go">▶ Luyện thêm</button>`);
-    b.onclick = () => go("challengePlay", true);
-    actions.appendChild(b);
-    $app.appendChild(wrap);
-    return;
-  }
-  if (done) {
-    actions.appendChild(h(`<div class="ch-done">✓ Hôm nay bé đã hoàn thành thử thách. Mai quay lại nhé!</div>`));
-    const b = h(`<button class="link-btn">Luyện thêm (không tính sao)</button>`);
-    b.onclick = () => go("challengePlay", true);
-    actions.appendChild(b);
-  } else {
-    const t = Challenge.today();
-    const label = full ? "▶ Luyện thêm" : t.idx > 0 ? `▶ Tiếp tục (câu ${t.idx + 1}/${Challenge.TOTAL})` : "▶ Bắt đầu";
-    const b = h(`<button class="primary big-go">${label}</button>`);
-    b.onclick = () => { Sfx.tap(); go("challengePlay", full); };
-    actions.appendChild(b);
-  }
-  $app.appendChild(wrap);
-  if (full) confetti();
-};
-
+routes.challenge = () => { startChallenge(); };
 routes.challengePlay = (practice) => {
-  $app.appendChild(topbar(practice ? "Luyện thêm" : "Thử thách hôm nay", "challenge"));
+  $app.appendChild(topbar(practice ? "Luyện thêm" : "Thử thách hôm nay", "home"));
   const body = h(`<div class="math-play ch-play"></div>`);
   $app.appendChild(body);
   // Luyện thêm: bộ câu mới, không lưu
@@ -810,18 +846,17 @@ routes.challengePlay = (practice) => {
     if (!practice) gotStar = Challenge.complete(score);
     const full = Challenge.stars >= Challenge.GOAL;
     body.innerHTML = `<div class="finish">
-      <div class="big-stars ${gotStar ? "pop" : ""}">${gotStar ? "⭐" : "🎉"}</div>
       <h2>Bé làm xong ${T} câu! Đúng ngay ${score} câu.</h2>
       ${gotStar ? `<p class="ch-got">Bé nhận được 1 ngôi sao!</p>` : ""}
-      ${starBar()}
+      ${jarHTML(Challenge.stars, gotStar)}
       ${full ? `<div class="ch-full">🎁 Bé đã đủ ${Challenge.GOAL} sao! Phần thưởng: <b>${esc(Challenge.reward)}</b><br>Bé nhận thưởng vào thứ 7 (${Challenge.rewardDayText}) nhé!</div>`
         : `<p class="hint">Còn ${Challenge.GOAL - Challenge.stars} sao nữa là bé có quà 🎁</p>`}
-      <button class="primary home-btn">Về trang chủ</button></div>`;
-    confetti();
+      <button class="primary home-btn">Về trang chính</button></div>`;
+    if (gotStar) playJarDrop(body); else confetti();
     Speech.speak(gotStar
       ? (full ? `Hoan hô! Bé đã đủ ${Challenge.GOAL} ngôi sao. Bé được nhận phần thưởng!` : `Giỏi quá! Bé nhận được một ngôi sao. Bé đã có ${Challenge.stars} ngôi sao.`)
       : `Bé làm xong rồi, đúng ${score} câu. Giỏi lắm!`);
-    body.querySelector(".home-btn").onclick = () => go("home");
+    body.querySelector(".home-btn").onclick = () => { history.replaceState({ name: "home", args: [] }, "", "#home"); render("home"); };
   }
   show();
 };
@@ -830,7 +865,7 @@ routes.challengePlay = (practice) => {
 //  CÀI ĐẶT (cho bố mẹ)
 // =============================================================
 routes.settings = () => {
-  $app.appendChild(topbar("Cài đặt cho bố mẹ"));
+  $app.appendChild(tabHeader("Cài đặt cho bố mẹ"));
   const wrap = h(`<div class="settings">
     <section><h3>👩 Kiểu giọng đọc</h3>
       <div class="presets">${Speech.PRESETS.map((p) => `<div class="preset ${Speech.settings.preset === p.id ? "on" : ""}" data-id="${p.id}">
@@ -865,6 +900,9 @@ routes.settings = () => {
     <section><h3>⭐ Tiến độ</h3>
       <p class="note">Bé đã có <b>${Object.keys(VIET_LESSONS).reduce((s, k) => s + Progress.count(k), 0)}</b> ngôi sao Tiếng Việt.</p>
       <button class="danger reset">Xoá tiến độ</button></section>
+    <section class="center-col">
+      <button class="install-btn ${Install.isInstalled() ? "hidden" : ""}">📲 Cài app lên màn hình chính</button>
+      <p class="version">Phiên bản ${APP_VERSION}</p></section>
   </div>`);
   $app.appendChild(wrap);
 
@@ -878,6 +916,7 @@ routes.settings = () => {
   }
   fillVoices();
   setTimeout(fillVoices, 800);
+  wrap.querySelector(".install-btn").onclick = () => { Sfx.tap(); Install.run(); };
   const micToggle = wrap.querySelector("#mic-on");
   micToggle.onchange = () => {
     Speech.setMic(micToggle.checked);
