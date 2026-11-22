@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "10 · đã làm lại thử thách"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "11 · sửa đánh vần â, ă"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -389,7 +389,9 @@ routes.alphabet = () => {
   const grid = h(`<div class="abc-grid"></div>`);
   ALPHABET.forEach(([ch, say]) => {
     const b = h(`<button class="abc"><span class="up">${ch.toUpperCase()}</span><span class="lo">${ch}</span><span class="say">${say}</span></button>`);
-    b.onclick = () => { b.classList.add("pulse"); Speech.speak(say).then(() => b.classList.remove("pulse")); };
+    // ă, â: để máy đọc tên chữ cái (á, ớ); nếu đưa "á"/"ớ" máy sẽ đọc thành "a sắc"/"ơ sắc"
+    const speakText = ch === "ă" || ch === "â" ? ch : say;
+    b.onclick = () => { b.classList.add("pulse"); Speech.speak(speakText).then(() => b.classList.remove("pulse")); };
     grid.appendChild(b);
   });
   $app.appendChild(h(`<p class="hint center">Bé chạm vào chữ để nghe cô đọc nhé!</p>`));
