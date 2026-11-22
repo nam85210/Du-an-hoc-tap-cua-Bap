@@ -50,20 +50,56 @@ const VN = (() => {
     return { word: syl, onset, onsetName, rhyme, tone, toneName: TONE_NAMES[tone], plain };
   }
 
-  /**
-   * Các bước đánh vần 1 tiếng theo cách dạy lớp 1:
-   *  "bà"  -> ["bờ", "a", "ba", "huyền", "bà"]
-   *  "cam" -> ["cờ", "am", "cam"]
-   *  "ổi"  -> ["ôi", "hỏi", "ổi"]
-   */
-  function spellSteps(syl) {
-    const a = analyzeSyllable(syl);
-    const steps = [];
-    if (a.onset) steps.push(a.onsetName, a.rhyme, a.plain);
-    else steps.push(a.plain);
-    if (a.tone) steps.push(a.toneName, a.word);
-    return steps;
+  // Âm cuối của vần và cách đọc khi đánh vần
+  const FINALS = [
+    ["ng", "ngờ"], ["nh", "nhờ"], ["ch", "chờ"], ["c", "cờ"], ["m", "mờ"], ["n", "nờ"],
+    ["p", "pờ"], ["t", "tờ"], ["i", "i"], ["y", "i"], ["o", "o"], ["u", "u"],
+  ];
+  // Cách đọc một nguyên âm đứng riêng
+  const VOWEL_SAY = { a: "a", "ă": "á", "â": "ớ", e: "e", "ê": "ê", i: "i", o: "o", "ô": "ô", "ơ": "ơ", u: "u", "ư": "ư", y: "i" };
+  const sayChunk = (c) => (c.length === 1 && VOWEL_SAY[c]) || c;
+
+  /** Tách vần: "am" -> ["a", "mờ"], "uôi" -> ["uô", "i"], "oa" -> ["o", "a"], "a" -> [] */
+  function splitRhyme(rhyme) {
+    if (rhyme.length < 2) return [];
+    for (const [f, sayF] of FINALS) {
+      if (rhyme.endsWith(f) && rhyme.length > f.length) {
+        const nucleus = rhyme.slice(0, -f.length);
+        const vowelFinal = "iyou".includes(f);
+        return [{ show: nucleus, say: sayChunk(nucleus) }, { show: vowelFinal ? f : sayF, say: sayF }];
+      }
+    }
+    // vần chỉ có nguyên âm đôi (oa, ua, ưa, ia...): tách nguyên âm đầu
+    return [{ show: rhyme[0], say: sayChunk(rhyme[0]) }, { show: rhyme.slice(1), say: sayChunk(rhyme.slice(1)) }];
   }
+
+  /**
+   * Kế hoạch đánh vần 1 tiếng (đánh vần vần trước, rồi ghép phụ âm):
+   *  "cam" -> a – mờ – am – cờ – am – cam
+   *  "bà"  -> bờ – a – ba – huyền – bà
+   *  "ổi"  -> ô – i – ôi – hỏi – ổi
+   * Mỗi bước: { show: chữ hiện, say: chữ đọc, part: "rh" (vần) | "on" (phụ âm) | "all" (cả tiếng) }
+   */
+  function spellPlan(syl) {
+    const a = analyzeSyllable(syl);
+    const plan = [];
+    const parts = splitRhyme(a.rhyme);
+    parts.forEach((p) => plan.push({ ...p, part: "rh" }));
+    if (parts.length) plan.push({ show: a.rhyme, say: a.rhyme, part: "rh" });
+    if (a.onset) {
+      plan.push({ show: a.onsetName, say: a.onsetName, part: "on" });
+      if (!parts.length) plan.push({ show: a.rhyme, say: sayChunk(a.rhyme), part: "rh" });
+      else plan.push({ show: a.rhyme, say: a.rhyme, part: "rh" });
+      plan.push({ show: a.plain, say: a.plain, part: "all" });
+    } else if (!parts.length) {
+      plan.push({ show: a.plain, say: sayChunk(a.plain), part: "all" });
+    }
+    if (a.tone) plan.push({ show: a.toneName, say: a.toneName, part: "tone" }, { show: a.word, say: a.word, part: "all" });
+    return plan;
+  }
+
+  /** Các chữ đọc khi đánh vần (dạng chuỗi) */
+  function spellSteps(syl) { return spellPlan(syl).map((p) => p.show); }
 
   /** Bỏ hết dấu thanh (giữ ă â ê ô ơ ư) */
   function stripTones(s) {
@@ -141,7 +177,7 @@ const VN = (() => {
     return text.split(/\s+/).map((s) => s.replace(/[.,!?;:]/g, "")).filter(Boolean);
   }
 
-  return { numberToWords, analyzeSyllable, spellSteps, stripTones, normalize, evaluate, syllables, TONE_NAMES };
+  return { numberToWords, analyzeSyllable, spellSteps, spellPlan, stripTones, normalize, evaluate, syllables, TONE_NAMES };
 })();
 
 if (typeof module !== "undefined") module.exports = VN;
