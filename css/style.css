@@ -347,3 +347,29 @@ button:disabled { opacity: 0.4; cursor: default; }
 .reward-input { width: 100%; font-size: 17px; padding: 10px; border-radius: 12px; border: 2px solid #e6d8c3; font-family: inherit; }
 .act.listen { background: var(--blue); }
 .wd small { font-size: 11px; color: var(--muted); }
+
+/* ---------- Loa trên từng đáp án ---------- */
+.ans-wrap { position: relative; display: flex; }
+.ans-wrap .ans { flex: 1; }
+.ans-spk {
+  position: absolute; top: -8px; right: -6px; width: 38px; height: 38px; border-radius: 50%;
+  background: var(--yellow); font-size: 18px; box-shadow: 0 3px 0 rgba(61,44,30,.15); z-index: 2;
+}
+.ans-spk.playing { animation: pulse .6s ease-in-out infinite; }
+.ans-spk:disabled { opacity: .5; }
+.q-spell:empty { display: none; }
+.actions.three { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.actions.three .act { font-size: 17px; padding: 12px 4px; }
+.actions.three .act span { font-size: 34px; }
+.ch-play .spell-area .step { font-size: 20px; }
+
+/* ---------- Kiểu giọng đọc ---------- */
+.presets { display: flex; flex-direction: column; gap: 8px; }
+.preset { display: flex; gap: 8px; align-items: stretch; }
+.preset .pick {
+  flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px;
+  background: var(--bg); border: 3px solid transparent; font-size: 17px; font-weight: 700; text-align: left;
+}
+.preset .pick span { font-size: 28px; }
+.preset.on .pick { border-color: var(--orange); background: #fff4c2; }
+.preset .try { width: 52px; border-radius: 14px; background: var(--yellow); font-size: 22px; }

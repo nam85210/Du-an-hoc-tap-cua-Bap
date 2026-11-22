@@ -11,8 +11,8 @@ const Speech = (() => {
 
   function loadSettings() {
     try {
-      return Object.assign({ rate: 0.8, voiceURI: "" }, JSON.parse(localStorage.getItem("bap-speech") || "{}"));
-    } catch { return { rate: 0.8, voiceURI: "" }; }
+      return Object.assign({ rate: 0.8, pitch: 1.15, preset: "co-giao", voiceURI: "" }, JSON.parse(localStorage.getItem("bap-speech") || "{}"));
+    } catch { return { rate: 0.8, pitch: 1.15, preset: "co-giao", voiceURI: "" }; }
   }
   function saveSettings() {
     try { localStorage.setItem("bap-speech", JSON.stringify(settings)); } catch {}
@@ -27,9 +27,24 @@ const Speech = (() => {
     synth.onvoiceschanged = refreshVoices;
   }
 
+  // Ưu tiên giọng chất lượng cao / giọng nữ nếu máy có (Linh, Hoài My, An...)
+  const FEMALE = /linh|my|an\b|female|nữ|gft|vif|vie|hoai|mai|lan/i;
+  const QUALITY = /enhanced|premium|nâng cao|cao cấp|neural|natural|network|online/i;
+  function rankVoice(v) { return (QUALITY.test(v.name) ? 2 : 0) + (FEMALE.test(v.name + v.voiceURI) ? 1 : 0); }
   function currentVoice() {
-    return voices.find((v) => v.voiceURI === settings.voiceURI) || voices[0] || null;
+    const chosen = voices.find((v) => v.voiceURI === settings.voiceURI);
+    if (chosen) return chosen;
+    return voices.slice().sort((a, b) => rankVoice(b) - rankVoice(a))[0] || null;
   }
+
+  // Các kiểu giọng nữ: cùng giọng tiếng Việt của máy, chỉnh cao độ và tốc độ cho dễ nghe
+  const PRESETS = [
+    { id: "co-giao", name: "Cô giáo dịu dàng", icon: "👩‍🏫", pitch: 1.15, rate: 0.8 },
+    { id: "chi-gai", name: "Chị gái vui tươi", icon: "👧", pitch: 1.35, rate: 0.92 },
+    { id: "me-cham", name: "Mẹ đọc chậm rãi", icon: "👩", pitch: 1.05, rate: 0.65 },
+    { id: "ban-nho", name: "Bạn nhỏ tinh nghịch", icon: "🧒", pitch: 1.6, rate: 0.85 },
+    { id: "ba-ke", name: "Bà kể chuyện", icon: "👵", pitch: 0.9, rate: 0.7 },
+  ];
 
   /** Đọc 1 đoạn văn bản, trả về Promise khi đọc xong */
   function speak(text, opts = {}) {
@@ -41,7 +56,7 @@ const Speech = (() => {
       const v = currentVoice();
       try { if (v) u.voice = v; } catch {}
       u.rate = opts.rate || settings.rate;
-      u.pitch = 1.1;
+      u.pitch = opts.pitch || settings.pitch || 1.15;
       let done = false;
       const finish = () => { if (!done) { done = true; resolve(); } };
       u.onend = finish;
@@ -113,6 +128,16 @@ const Speech = (() => {
     get voices() { refreshVoices(); return voices; },
     get settings() { return settings; },
     setRate(r) { settings.rate = r; saveSettings(); },
+    PRESETS,
+    setPreset(id) {
+      const p = PRESETS.find((x) => x.id === id) || PRESETS[0];
+      settings.preset = p.id; settings.pitch = p.pitch; settings.rate = p.rate; saveSettings();
+    },
+    previewPreset(id, text) {
+      const p = PRESETS.find((x) => x.id === id) || PRESETS[0];
+      return speak(text, { pitch: p.pitch, rate: p.rate });
+    },
+    get currentVoiceName() { const v = currentVoice(); return v ? v.name : ""; },
     setVoice(uri) { settings.voiceURI = uri; saveSettings(); },
   };
 })();
