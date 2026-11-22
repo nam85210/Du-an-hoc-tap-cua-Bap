@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "5 · đánh vần vần trước"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "6 · thử thách mỗi ngày"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -74,10 +74,13 @@ function confetti() {
 // =============================================================
 routes.home = () => {
   $app.appendChild(h(`<div class="home">
-    <div class="hero"><div class="mascot">🌽</div>
+    <div class="hero small"><div class="mascot">🌽</div>
       <h1>Bắp Học Vui</h1><p>Chuẩn bị vào lớp 1</p></div>
-    <button class="big-card math" data-go="mathMenu"><span class="emoji">🔢</span><span>Toán</span><small>Cộng · Trừ · Cân thăng bằng</small></button>
-    <button class="big-card viet" data-go="vietMenu"><span class="emoji">📚</span><span>Tiếng Việt</span><small>Chữ cái · Từ đơn · Từ ghép · Câu</small></button>
+    ${challengeCardHTML()}
+    <div class="subject-row">
+      <button class="sub-card math" data-go="mathMenu"><span class="emoji">🔢</span><span>Toán</span></button>
+      <button class="sub-card viet" data-go="vietMenu"><span class="emoji">📚</span><span>Tiếng Việt</span></button>
+    </div>
     <button class="install-btn ${Install.isInstalled() ? "hidden" : ""}">📲 Cài app lên màn hình chính</button>
     <button class="link-btn" data-go="settings">⚙️ Cài đặt cho bố mẹ</button>
     <p class="version">Phiên bản ${APP_VERSION}</p>
@@ -232,6 +235,22 @@ function makeQuestion(mode, max) {
   if (m === "logic") return LogicScale.next();
   if (m === "kitchen") return LogicScale.kitchen();
   return MathGen.make(m, max);
+}
+
+function mathQuestionHTML(q) {
+  return q.kind === "logic" ? logicHTML(q) : q.kind === "kitchen" ? kitchenHTML(q) : q.kind === "balance"
+    ? `<p class="hint">Bé chọn số để cân thăng bằng nhé!</p><div class="scale-box">${balanceSVG(q, null)}</div>`
+    : `${mathVisual(q.visual)}<div class="equation">${q.text.map((t) => `<span class="${t === "?" ? "qbox" : ""}">${t}</span>`).join("")}</div>`;
+}
+function mathShowAnswer(q, v, body) {
+  if (q.kind === "balance") body.querySelector(".scale-box").innerHTML = balanceSVG(q, v);
+  if (v !== q.answer) return;
+  const eq = body.querySelector(".equation .qbox");
+  if (eq) { eq.textContent = v; eq.classList.add("filled"); }
+  const qm = body.querySelector(".qmark");
+  if (qm) qm.outerHTML = panItems([[q.unit, v]]);
+  const dial = body.querySelector(".kdial");
+  if (dial) { dial.textContent = v; dial.classList.add("filled"); }
 }
 
 routes.mathPlay = (mode) => {
@@ -560,6 +579,205 @@ routes.card = (key, index) => {
 };
 
 // =============================================================
+//  THỬ THÁCH MỖI NGÀY
+// =============================================================
+function starBar() {
+  const n = Challenge.stars, G = Challenge.GOAL;
+  return `<div class="star-bar"><div class="sb-fill" style="width:${(n / G) * 100}%"></div>
+    <span class="sb-text">⭐ ${n}/${G} sao</span><span class="sb-gift">🎁</span></div>`;
+}
+function weekStrip() {
+  return `<div class="week">${Challenge.week().map((d) => `<div class="wd ${d.done ? "done" : ""} ${d.isToday ? "today" : ""} ${d.future ? "future" : ""}">
+    <span>${d.name}</span><b>${d.done ? "⭐" : d.isToday ? "?" : "·"}</b></div>`).join("")}</div>`;
+}
+function challengeCardHTML() {
+  const done = Challenge.doneToday();
+  const label = done ? "Hôm nay bé đã xong! ✓" : Challenge.inProgress ? `Tiếp tục thử thách (câu ${Challenge.today().idx + 1}/${Challenge.TOTAL})` : "Bắt đầu thử thách";
+  return `<button class="challenge-card ${done ? "done" : ""}" data-go="challenge">
+    <span class="cc-icon">🏆</span>
+    <span class="cc-title">${label}</span>
+    <span class="cc-sub">20 câu Toán + Tiếng Việt · xong được 1 ⭐</span>
+    ${starBar()}
+  </button>`;
+}
+
+routes.challenge = () => {
+  $app.appendChild(topbar("Thử thách mỗi ngày"));
+  const done = Challenge.doneToday();
+  const full = Challenge.stars >= Challenge.GOAL;
+  const wrap = h(`<div class="ch-intro">
+    <div class="ch-trophy">${full ? "🎁" : "🏆"}</div>
+    ${starBar()}
+    <p class="ch-reward">Đủ ${Challenge.GOAL} sao bé được: <b>${esc(Challenge.reward)}</b></p>
+    <h3>Tuần này</h3>
+    ${weekStrip()}
+    <div class="ch-actions"></div>
+    <p class="hint center">Mỗi ngày 20 câu: 10 câu Toán, 10 câu Tiếng Việt.<br>Làm xong được 1 ngôi sao (mỗi ngày 1 sao).</p>
+  </div>`);
+  const actions = wrap.querySelector(".ch-actions");
+  if (full) {
+    actions.appendChild(h(`<div class="ch-full">🎉 Bé đã đủ ${Challenge.GOAL} sao! Bố mẹ trao thưởng cho bé nhé!</div>`));
+  }
+  if (done) {
+    actions.appendChild(h(`<div class="ch-done">✓ Hôm nay bé đã hoàn thành thử thách. Mai quay lại nhé!</div>`));
+    const b = h(`<button class="link-btn">Luyện thêm (không tính sao)</button>`);
+    b.onclick = () => go("challengePlay", true);
+    actions.appendChild(b);
+  } else {
+    const t = Challenge.today();
+    const b = h(`<button class="primary big-go">${t.idx > 0 ? `▶ Tiếp tục (câu ${t.idx + 1}/${Challenge.TOTAL})` : "▶ Bắt đầu"}</button>`);
+    b.onclick = () => { Sfx.tap(); go("challengePlay", false); };
+    actions.appendChild(b);
+  }
+  $app.appendChild(wrap);
+  if (full) confetti();
+};
+
+routes.challengePlay = (practice) => {
+  $app.appendChild(topbar(practice ? "Luyện thêm" : "Thử thách hôm nay", "challenge"));
+  const body = h(`<div class="math-play ch-play"></div>`);
+  $app.appendChild(body);
+  // Luyện thêm: bộ câu mới, không lưu
+  // Luyện thêm: bộ 20 câu mới, không lưu, không tính sao
+  const state = practice ? { idx: 0, score: 0, questions: Challenge.build() } : Challenge.today();
+  let idx = state.idx, score = state.score;
+  const T = state.questions.length;
+
+  function header() {
+    return `<div class="progress"><div style="width:${(idx / T) * 100}%"></div></div>
+      <div class="qcount">Câu ${idx + 1}/${T} · ✅ ${score}</div>`;
+  }
+  function nextQ(gotIt) {
+    if (gotIt) score++;
+    idx++;
+    if (!practice) Challenge.progress(idx, score);
+    if (idx >= T) return finish();
+    setTimeout(show, 0);
+  }
+  function praise() { Sfx.good(); const m = pick(PRAISES.concat(MATH_PRAISES)); showFeedback(true, m); Speech.speak(m); }
+  function oops(msg) { Sfx.bad(); showFeedback(false, msg); return Speech.speak(msg); }
+
+  // Câu chọn đáp án (Toán và các dạng Tiếng Việt có lựa chọn)
+  function choice(q, inner, opts, isRight, onPick) {
+    let first = true;
+    body.innerHTML = `${header()}<div class="question">${inner}
+      <button class="speak-btn small">🔊 Nghe đề</button></div>
+      <div class="answers ${q.kind.startsWith("v") ? "words" : ""}">${opts.map((o) => `<button class="ans" data-v="${esc(o)}">${esc(o)}</button>`).join("")}</div>`;
+    const say = () => Speech.speak(q.say);
+    body.querySelector(".speak-btn").onclick = say;
+    say();
+    body.querySelectorAll(".ans").forEach((b) => (b.onclick = () => {
+      const v = b.dataset.v;
+      const ok = isRight(v);
+      if (onPick) onPick(v, ok);
+      if (ok) {
+        b.classList.add("right");
+        body.querySelectorAll(".ans").forEach((x) => (x.disabled = true));
+        praise();
+        setTimeout(() => nextQ(first), 2200);
+      } else {
+        first = false;
+        b.classList.add("wrong"); b.disabled = true;
+        oops(q.kind.startsWith("v") ? "Chưa đúng, bé thử lại nhé!" : pick(MATH_RETRY));
+      }
+    }));
+  }
+
+  // Câu đọc to: AI nghe bé đọc
+  function readAloud(q) {
+    let tries = 0;
+    body.innerHTML = `${header()}<div class="question">
+      <p class="hint">Bé đọc to chữ này nhé!</p>
+      <div class="pic small">${q.e}</div>
+      <div class="syllables">${VN.syllables(q.word).map((s) => `<span class="syl static">${sylParts(s)}</span>`).join("")}</div>
+      <div class="spell-area"></div>
+      <div class="actions">
+        <button class="act listen"><span>🔊</span>Nghe cô đọc</button>
+        <button class="act mic"><span>🎤</span>Bé đọc</button>
+      </div>
+      <div class="heard"></div>
+      <div class="parent-check hidden"><p>Bố mẹ chấm giúp bé nhé:</p>
+        <button class="pc-ok">✓ Bé đọc đúng</button><button class="pc-no">✗ Chưa đúng</button></div>
+      <button class="link-btn skip hidden">Câu tiếp theo ▶</button>
+    </div>`;
+    const mic = body.querySelector(".mic"), heard = body.querySelector(".heard");
+    const spellArea = body.querySelector(".spell-area");
+    body.querySelector(".listen").onclick = () => Speech.speak(q.word);
+    const right = () => { praise(); setTimeout(() => nextQ(tries === 0), 2200); };
+    const wrong = async (msg) => {
+      tries++;
+      await oops(msg);
+      // đánh vần lại cho bé
+      for (const s of VN.syllables(q.word)) {
+        const plan = VN.spellPlan(s);
+        spellArea.innerHTML = `<div class="spell-line">${plan.map((p) => `<span class="step">${esc(p.show)}</span>`).join('<span class="dash">–</span>')}</div>`;
+        const els = [...spellArea.querySelectorAll(".step")];
+        await Speech.speakSteps(plan.map((p) => p.say), (k) => els.forEach((e, j) => e.classList.toggle("hl", j === k)));
+      }
+      if (tries >= 2) body.querySelector(".skip").classList.remove("hidden");
+      Speech.speak("Bé đọc lại nhé!");
+    };
+    body.querySelector(".skip").onclick = () => nextQ(false);
+    body.querySelector(".pc-ok").onclick = right;
+    body.querySelector(".pc-no").onclick = () => wrong(pick(RETRY_MSGS));
+    mic.onclick = async () => {
+      if (!Speech.canListen) { body.querySelector(".parent-check").classList.remove("hidden"); return; }
+      mic.classList.add("listening"); mic.innerHTML = "<span>👂</span>Đang nghe...";
+      let alts;
+      try { alts = await Speech.listen(); }
+      catch (e) {
+        mic.classList.remove("listening"); mic.innerHTML = "<span>🎤</span>Bé đọc";
+        heard.textContent = e.message === "no-speech" ? "Máy chưa nghe thấy, bé đọc to hơn nhé!" : "Micro chưa dùng được, bố mẹ chấm giúp nhé.";
+        if (e.message !== "no-speech") body.querySelector(".parent-check").classList.remove("hidden");
+        return;
+      }
+      mic.classList.remove("listening"); mic.innerHTML = "<span>🎤</span>Bé đọc";
+      const r = VN.evaluate(q.word, alts);
+      heard.innerHTML = `Máy nghe được: <b>“${esc(r.heard || alts[0])}”</b>`;
+      if (r.status === "correct") right();
+      else wrong(r.status === "tone" ? "Gần đúng rồi! Bé chú ý dấu nhé." : pick(RETRY_MSGS));
+    };
+    Speech.speak("Bé đọc to chữ này nhé!");
+  }
+
+  function show() {
+    const q = state.questions[idx];
+    if (!q) return finish();
+    if (q.kind === "vread") return readAloud(q);
+    if (q.kind === "vpic") return choice(q, `<p class="hint">Hình này là chữ nào?</p><div class="pic small">${q.e}</div>`,
+      q.options, (v) => v === q.answer);
+    if (q.kind === "vlisten") return choice(q, `<p class="hint">Bé nghe rồi chọn đúng chữ nhé!</p><div class="big-ear">👂</div>`,
+      q.options, (v) => v === q.answer);
+    if (q.kind === "vletter") return choice(q, `<p class="hint">Chữ còn thiếu là chữ gì?</p><div class="pic small">${q.e}</div>
+      <div class="missing"><span class="qbox">?</span>${esc(q.rest)}</div>`, q.options, (v) => v === q.answer,
+      (v, ok) => { if (ok) { const m = body.querySelector(".missing .qbox"); m.textContent = v; m.classList.add("filled"); } });
+    // Toán
+    return choice(q, mathQuestionHTML(q), q.options.map(String), (v) => +v === q.answer,
+      (v) => mathShowAnswer(q, +v, body));
+  }
+
+  function finish() {
+    let gotStar = false;
+    if (!practice) gotStar = Challenge.complete(score);
+    const full = Challenge.stars >= Challenge.GOAL;
+    body.innerHTML = `<div class="finish">
+      <div class="big-stars ${gotStar ? "pop" : ""}">${gotStar ? "⭐" : "🎉"}</div>
+      <h2>Bé làm xong ${T} câu! Đúng ngay ${score} câu.</h2>
+      ${gotStar ? `<p class="ch-got">Bé nhận được 1 ngôi sao!</p>` : ""}
+      ${starBar()}
+      ${full ? `<div class="ch-full">🎁 Bé đã đủ ${Challenge.GOAL} sao! Phần thưởng: <b>${esc(Challenge.reward)}</b></div>`
+        : `<p class="hint">Còn ${Challenge.GOAL - Challenge.stars} sao nữa là bé có quà 🎁</p>`}
+      <button class="primary home-btn">Về trang chủ</button></div>`;
+    confetti();
+    Speech.speak(gotStar
+      ? (full ? `Hoan hô! Bé đã đủ ${Challenge.GOAL} ngôi sao. Bé được nhận phần thưởng!` : `Giỏi quá! Bé nhận được một ngôi sao. Bé đã có ${Challenge.stars} ngôi sao.`)
+      : `Bé làm xong rồi, đúng ${score} câu. Giỏi lắm!`);
+    body.querySelector(".home-btn").onclick = () => go("home");
+  }
+  show();
+};
+
+// =============================================================
 //  CÀI ĐẶT (cho bố mẹ)
 // =============================================================
 routes.settings = () => {
@@ -575,6 +793,12 @@ routes.settings = () => {
       <p class="note">${Speech.canListen ? "Máy hỗ trợ nhận giọng nói. Bấm nút rồi nói “con gà”." : "⚠️ Trình duyệt này chưa hỗ trợ nhận giọng nói. Hãy dùng Chrome (Android) hoặc Safari (iPhone, iOS 14.5+)."}</p>
       <button class="primary test-mic" ${Speech.canListen ? "" : "disabled"}>Thử micro</button>
       <p class="mic-result"></p></section>
+    <section><h3>🏆 Thử thách mỗi ngày</h3>
+      <label for="reward">Phần thưởng khi bé đủ ${Challenge.GOAL} sao:</label>
+      <input id="reward" class="reward-input" maxlength="80">
+      <p class="note">Bé đang có <b class="ch-stars">${Challenge.stars}</b>/${Challenge.GOAL} sao · đã nhận thưởng ${Challenge.rounds} lần.</p>
+      <div class="row-btns"><button class="primary star-minus">− 1 sao</button><button class="primary star-plus">+ 1 sao</button></div>
+      <button class="primary new-round">Đã trao thưởng → bắt đầu vòng mới</button></section>
     <section><h3>⭐ Tiến độ</h3>
       <p class="note">Bé đã có <b>${Object.keys(VIET_LESSONS).reduce((s, k) => s + Progress.count(k), 0)}</b> ngôi sao Tiếng Việt.</p>
       <button class="danger reset">Xoá tiến độ</button></section>
@@ -601,6 +825,15 @@ routes.settings = () => {
     out.textContent = "👂 Đang nghe...";
     try { const a = await Speech.listen(); out.textContent = "Máy nghe được: " + a.join(" | "); }
     catch (e) { out.textContent = "Lỗi: " + e.message; }
+  };
+  const rw = wrap.querySelector(".reward-input");
+  rw.value = Challenge.reward;
+  rw.onchange = () => Challenge.setReward(rw.value.trim() || "Một món quà bất ngờ từ bố mẹ 🎁");
+  const upd = () => (wrap.querySelector(".ch-stars").textContent = Challenge.stars);
+  wrap.querySelector(".star-plus").onclick = () => { Challenge.setStars(Challenge.stars + 1); upd(); };
+  wrap.querySelector(".star-minus").onclick = () => { Challenge.setStars(Challenge.stars - 1); upd(); };
+  wrap.querySelector(".new-round").onclick = () => {
+    if (confirm("Bé đã nhận thưởng? Số sao sẽ về 0 để bắt đầu vòng mới.")) { Challenge.newRound(); render("settings"); }
   };
   wrap.querySelector(".reset").onclick = () => {
     if (confirm("Xoá toàn bộ sao của bé?")) { Progress.reset(); render("settings"); }
