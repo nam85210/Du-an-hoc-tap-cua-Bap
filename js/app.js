@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "9 · thanh công cụ & lọ sao"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "10 · đã làm lại thử thách"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -896,7 +896,8 @@ routes.settings = () => {
       <p class="note">Bé đang có <b class="ch-stars">${Challenge.stars}</b>/${Challenge.GOAL} sao · đã nhận thưởng ${Challenge.rounds} lần.</p>
       <div class="row-btns"><button class="primary star-minus">− 1 sao</button><button class="primary star-plus">+ 1 sao</button></div>
       <button class="primary new-round">Đã trao thưởng → bắt đầu vòng mới</button>
-      <p class="note">Vòng mới tính sao từ thứ 7 gần nhất. Vòng hiện tại tính từ thứ 7 (${Challenge.roundStartText}).</p></section>
+      <p class="note">Vòng mới tính sao từ thứ 7 gần nhất. Vòng hiện tại tính từ thứ 7 (${Challenge.roundStartText}).</p>
+      <button class="danger reset-challenge">Xoá thử thách, làm lại từ đầu</button></section>
     <section><h3>⭐ Tiến độ</h3>
       <p class="note">Bé đã có <b>${Object.keys(VIET_LESSONS).reduce((s, k) => s + Progress.count(k), 0)}</b> ngôi sao Tiếng Việt.</p>
       <button class="danger reset">Xoá tiến độ</button></section>
@@ -950,6 +951,9 @@ routes.settings = () => {
   wrap.querySelector(".star-minus").onclick = () => { Challenge.setStars(Challenge.stars - 1); upd(); };
   wrap.querySelector(".new-round").onclick = () => {
     if (confirm("Bé đã nhận thưởng? Số sao sẽ về 0 để bắt đầu vòng mới.")) { Challenge.newRound(); render("settings"); }
+  };
+  wrap.querySelector(".reset-challenge").onclick = () => {
+    if (confirm("Xoá hết sao và lịch thử thách để làm lại từ đầu?")) { Challenge.resetAll(); render("settings"); }
   };
   wrap.querySelector(".reset").onclick = () => {
     if (confirm("Xoá toàn bộ sao của bé?")) { Progress.reset(); render("settings"); }

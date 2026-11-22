@@ -120,6 +120,15 @@ const Challenge = (() => {
 
   if (!st.roundStart) { st.roundStart = dateKey(lastSaturday()); save(); }
 
+  // Bố mẹ yêu cầu làm lại thử thách từ đầu: chỉ chạy MỘT lần trên mỗi máy
+  try {
+    if (!localStorage.getItem("bap-challenge-reset-1")) {
+      const reward = st.reward;
+      st = defaults(); st.reward = reward; st.roundStart = dateKey(lastSaturday()); save();
+      localStorage.setItem("bap-challenge-reset-1", "1");
+    }
+  } catch {}
+
   /** Hôm nay đã được tính sao chưa (vòng mới bắt đầu từ thứ 7) */
   function canEarn() { return dateKey() >= st.roundStart; }
 
@@ -171,5 +180,10 @@ const Challenge = (() => {
     /** Ngày nhận thưởng: thứ 7 đầu tiên kể từ ngày bé đủ sao */
     get rewardDayText() { return st.fullDate ? niceDate(dateKey(nextSaturday(fromKey(st.fullDate)))) : ""; },
     restartToday() { st.today = null; save(); },
+    /** Xoá toàn bộ thử thách: 0 sao, xoá lịch, tính lại từ thứ 7 vừa qua (giữ phần thưởng bố mẹ đặt) */
+    resetAll() {
+      const reward = st.reward;
+      st = defaults(); st.reward = reward; st.roundStart = dateKey(lastSaturday()); save();
+    },
   };
 })();
