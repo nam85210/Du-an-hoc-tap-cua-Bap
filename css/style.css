@@ -346,3 +346,4 @@ button:disabled { opacity: 0.4; cursor: default; }
 .row-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .reward-input { width: 100%; font-size: 17px; padding: 10px; border-radius: 12px; border: 2px solid #e6d8c3; font-family: inherit; }
 .act.listen { background: var(--blue); }
+.wd small { font-size: 11px; color: var(--muted); }

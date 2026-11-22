@@ -14,7 +14,23 @@ const Challenge = (() => {
   let st = (() => {
     try { return Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || "{}")); } catch { return defaults(); }
   })();
+  if (!st.roundStart) st.roundStart = null; // gán ở dưới khi đã có hàm ngày
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch {} };
+
+  // ---------- Tuần thử thách tính từ THỨ 7 ----------
+  // (đủ sao vào cuối tuần thì bé được đi chơi luôn, không vướng ngày đi học)
+  function lastSaturday(d = new Date()) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() - ((x.getDay() + 1) % 7)); // getDay: 6 = thứ 7
+    return x;
+  }
+  function nextSaturday(d = new Date()) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    x.setDate(x.getDate() + ((6 - x.getDay() + 7) % 7)); // hôm nay là thứ 7 thì lấy hôm nay
+    return x;
+  }
+  function fromKey(k) { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d); }
+  function niceDate(k) { const d = fromKey(k); return `${d.getDate()}/${d.getMonth() + 1}`; }
 
   function dateKey(d = new Date()) {
     const p = (n) => String(n).padStart(2, "0");
@@ -102,6 +118,11 @@ const Challenge = (() => {
     return st.today;
   }
 
+  if (!st.roundStart) { st.roundStart = dateKey(lastSaturday()); save(); }
+
+  /** Hôm nay đã được tính sao chưa (vòng mới bắt đầu từ thứ 7) */
+  function canEarn() { return dateKey() >= st.roundStart; }
+
   function doneToday() { return !!(st.days[dateKey()] && st.days[dateKey()].done); }
 
   /** Ghi lại tiến độ câu hiện tại */
@@ -112,21 +133,26 @@ const Challenge = (() => {
     const d = dateKey();
     const first = !doneToday();
     st.days[d] = { done: true, score: Math.max(score, (st.days[d] && st.days[d].score) || 0) };
-    if (first) st.stars = Math.min(GOAL, st.stars + 1);
+    const earned = first && canEarn() && st.stars < GOAL;
+    if (earned) {
+      st.stars++;
+      if (st.stars >= GOAL) st.fullDate = d;
+    }
     st.today = null;
     save();
-    return first;
+    return earned;
   }
 
   /** 7 ngày trong tuần này (Thứ 2 -> CN) */
   function week() {
-    const now = new Date();
-    const dow = (now.getDay() + 6) % 7; // 0 = thứ 2
-    const names = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
+    // Tuần thử thách: Thứ 7 -> Thứ 6
+    const start = lastSaturday();
+    const today = dateKey();
+    const names = ["T7", "CN", "T2", "T3", "T4", "T5", "T6"];
     return names.map((n, i) => {
-      const d = new Date(now); d.setDate(now.getDate() - dow + i);
+      const d = new Date(start); d.setDate(start.getDate() + i);
       const k = dateKey(d);
-      return { name: n, key: k, done: !!(st.days[k] && st.days[k].done), isToday: i === dow, future: i > dow };
+      return { name: n, date: `${d.getDate()}/${d.getMonth() + 1}`, key: k, done: !!(st.days[k] && st.days[k].done), isToday: k === today, future: k > today };
     });
   }
 
@@ -138,7 +164,12 @@ const Challenge = (() => {
     get inProgress() { return !!(st.today && st.today.date === dateKey() && st.today.idx > 0); },
     setReward(t) { st.reward = t; save(); },
     setStars(n) { st.stars = Math.max(0, Math.min(GOAL, n)); save(); },
-    newRound() { st.stars = 0; st.rounds++; save(); },
+    // Vòng mới bắt đầu từ thứ 7 (hôm nay là thứ 7 thì tính luôn hôm nay)
+    newRound() { st.stars = 0; st.rounds++; st.fullDate = null; st.roundStart = dateKey(nextSaturday()); save(); },
+    canEarn,
+    get roundStartText() { return niceDate(st.roundStart); },
+    /** Ngày nhận thưởng: thứ 7 đầu tiên kể từ ngày bé đủ sao */
+    get rewardDayText() { return st.fullDate ? niceDate(dateKey(nextSaturday(fromKey(st.fullDate)))) : ""; },
     restartToday() { st.today = null; save(); },
   };
 })();

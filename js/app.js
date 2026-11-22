@@ -588,11 +588,11 @@ function starBar() {
 }
 function weekStrip() {
   return `<div class="week">${Challenge.week().map((d) => `<div class="wd ${d.done ? "done" : ""} ${d.isToday ? "today" : ""} ${d.future ? "future" : ""}">
-    <span>${d.name}</span><b>${d.done ? "⭐" : d.isToday ? "?" : "·"}</b></div>`).join("")}</div>`;
+    <span>${d.name}</span><b>${d.done ? "⭐" : d.isToday ? "?" : "·"}</b><small>${d.date}</small></div>`).join("")}</div>`;
 }
 function challengeCardHTML() {
   const done = Challenge.doneToday();
-  const label = done ? "Hôm nay bé đã xong! ✓" : Challenge.inProgress ? `Tiếp tục thử thách (câu ${Challenge.today().idx + 1}/${Challenge.TOTAL})` : "Bắt đầu thử thách";
+  const label = done ? "Hôm nay bé đã xong! ✓" : !Challenge.canEarn() ? `Vòng mới từ thứ 7 (${Challenge.roundStartText})` : Challenge.inProgress ? `Tiếp tục thử thách (câu ${Challenge.today().idx + 1}/${Challenge.TOTAL})` : "Bắt đầu thử thách";
   return `<button class="challenge-card ${done ? "done" : ""}" data-go="challenge">
     <span class="cc-icon">🏆</span>
     <span class="cc-title">${label}</span>
@@ -609,14 +609,22 @@ routes.challenge = () => {
     <div class="ch-trophy">${full ? "🎁" : "🏆"}</div>
     ${starBar()}
     <p class="ch-reward">Đủ ${Challenge.GOAL} sao bé được: <b>${esc(Challenge.reward)}</b></p>
-    <h3>Tuần này</h3>
+    <h3>Tuần này (Thứ 7 → Thứ 6)</h3>
     ${weekStrip()}
     <div class="ch-actions"></div>
-    <p class="hint center">Mỗi ngày 20 câu: 10 câu Toán, 10 câu Tiếng Việt.<br>Làm xong được 1 ngôi sao (mỗi ngày 1 sao).</p>
+    <p class="hint center">Mỗi ngày 20 câu: 10 câu Toán, 10 câu Tiếng Việt.<br>Làm xong được 1 ngôi sao (mỗi ngày 1 sao).<br>Tuần thử thách tính từ thứ 7, đủ sao thì nhận thưởng vào thứ 7 để bé đi chơi được.</p>
   </div>`);
   const actions = wrap.querySelector(".ch-actions");
   if (full) {
-    actions.appendChild(h(`<div class="ch-full">🎉 Bé đã đủ ${Challenge.GOAL} sao! Bố mẹ trao thưởng cho bé nhé!</div>`));
+    actions.appendChild(h(`<div class="ch-full">🎉 Bé đã đủ ${Challenge.GOAL} sao!<br>Bé nhận thưởng vào <b>thứ 7 (${Challenge.rewardDayText})</b> nhé!</div>`));
+  }
+  if (!Challenge.canEarn() && !full) {
+    actions.appendChild(h(`<div class="ch-done">Vòng thử thách mới bắt đầu từ <b>thứ 7 (${Challenge.roundStartText})</b>. Trước đó bé vẫn luyện thêm được nhé!</div>`));
+    const b = h(`<button class="primary big-go">▶ Luyện thêm</button>`);
+    b.onclick = () => go("challengePlay", true);
+    actions.appendChild(b);
+    $app.appendChild(wrap);
+    return;
   }
   if (done) {
     actions.appendChild(h(`<div class="ch-done">✓ Hôm nay bé đã hoàn thành thử thách. Mai quay lại nhé!</div>`));
@@ -625,8 +633,9 @@ routes.challenge = () => {
     actions.appendChild(b);
   } else {
     const t = Challenge.today();
-    const b = h(`<button class="primary big-go">${t.idx > 0 ? `▶ Tiếp tục (câu ${t.idx + 1}/${Challenge.TOTAL})` : "▶ Bắt đầu"}</button>`);
-    b.onclick = () => { Sfx.tap(); go("challengePlay", false); };
+    const label = full ? "▶ Luyện thêm" : t.idx > 0 ? `▶ Tiếp tục (câu ${t.idx + 1}/${Challenge.TOTAL})` : "▶ Bắt đầu";
+    const b = h(`<button class="primary big-go">${label}</button>`);
+    b.onclick = () => { Sfx.tap(); go("challengePlay", full); };
     actions.appendChild(b);
   }
   $app.appendChild(wrap);
@@ -765,7 +774,7 @@ routes.challengePlay = (practice) => {
       <h2>Bé làm xong ${T} câu! Đúng ngay ${score} câu.</h2>
       ${gotStar ? `<p class="ch-got">Bé nhận được 1 ngôi sao!</p>` : ""}
       ${starBar()}
-      ${full ? `<div class="ch-full">🎁 Bé đã đủ ${Challenge.GOAL} sao! Phần thưởng: <b>${esc(Challenge.reward)}</b></div>`
+      ${full ? `<div class="ch-full">🎁 Bé đã đủ ${Challenge.GOAL} sao! Phần thưởng: <b>${esc(Challenge.reward)}</b><br>Bé nhận thưởng vào thứ 7 (${Challenge.rewardDayText}) nhé!</div>`
         : `<p class="hint">Còn ${Challenge.GOAL - Challenge.stars} sao nữa là bé có quà 🎁</p>`}
       <button class="primary home-btn">Về trang chủ</button></div>`;
     confetti();
@@ -798,7 +807,8 @@ routes.settings = () => {
       <input id="reward" class="reward-input" maxlength="80">
       <p class="note">Bé đang có <b class="ch-stars">${Challenge.stars}</b>/${Challenge.GOAL} sao · đã nhận thưởng ${Challenge.rounds} lần.</p>
       <div class="row-btns"><button class="primary star-minus">− 1 sao</button><button class="primary star-plus">+ 1 sao</button></div>
-      <button class="primary new-round">Đã trao thưởng → bắt đầu vòng mới</button></section>
+      <button class="primary new-round">Đã trao thưởng → bắt đầu vòng mới</button>
+      <p class="note">Vòng mới tính sao từ thứ 7 gần nhất. Vòng hiện tại tính từ thứ 7 (${Challenge.roundStartText}).</p></section>
     <section><h3>⭐ Tiến độ</h3>
       <p class="note">Bé đã có <b>${Object.keys(VIET_LESSONS).reduce((s, k) => s + Progress.count(k), 0)}</b> ngôi sao Tiếng Việt.</p>
       <button class="danger reset">Xoá tiến độ</button></section>
