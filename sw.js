@@ -1,10 +1,10 @@
 // Lưu tạm các file để app mở được cả khi mạng yếu.
 // Mỗi lần sửa code: tăng APP_VERSION ở đây VÀ trong js/app.js, index.html (?v=...).
-const APP_VERSION = "12";
+const APP_VERSION = "13";
 const CACHE = "bap-hoc-vui-v" + APP_VERSION;
 const FILES = [
   "./", "./index.html", "./css/style.css", "./manifest.webmanifest",
-  "./js/data.js", "./js/vietnamese.js", "./js/speech.js", "./js/math.js", "./js/logic-scale.js", "./js/challenge.js", "./js/app.js",
+  "./js/data.js", "./js/vietnamese.js", "./js/speech.js", "./js/math.js", "./js/logic-scale.js", "./js/challenge.js", "./js/jar.js", "./js/app.js",
   "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png",
 ];
 self.addEventListener("install", (e) => {

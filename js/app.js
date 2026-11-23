@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "12 · đánh vần hiện chữ cái"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "13 · lắc lọ sao"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -661,27 +661,37 @@ function weekStrip() {
     <span>${d.name}</span><b>${d.done ? "⭐" : d.isToday ? "?" : "·"}</b><small>${d.date}</small></div>`).join("")}</div>`;
 }
 /** Lọ thủy tinh đựng sao. drop = true: ngôi sao cuối cùng rơi từ trên xuống */
-function jarHTML(n, drop = false) {
-  const stars = Array.from({ length: n }, (_, i) =>
-    `<span class="jstar ${drop && i === n - 1 ? "drop" : ""}">⭐</span>`).join("");
+function jarHTML(n) {
   return `<div class="jar-wrap">
     <div class="jar">
       <div class="jar-lid"></div><div class="jar-neck"></div>
-      <div class="jar-body"><div class="jar-stars">${stars}</div><div class="jar-shine"></div>
+      <div class="jar-body"><div class="jar-shine"></div>
         <div class="jar-label">${n}/${Challenge.GOAL}</div></div>
-    </div></div>`;
+    </div></div>
+    ${n ? `<p class="hint center shake-hint">Lắc điện thoại hoặc chạm vào lọ để xáo sao ✨</p>
+    ${StarJar.needsPermission() ? '<button class="primary shake-on">📳 Bật lắc lọ</button>' : ""}` : ""}`;
 }
-function playJarDrop(root) {
-  const s = root.querySelector(".jstar.drop");
-  if (!s) return;
-  setTimeout(() => { Sfx.good(); root.querySelector(".jar").classList.add("wobble"); confetti(); }, 1050);
+/** Đổ sao vào lọ (sao nằm lộn xộn); drop = ngôi sao mới rơi vào */
+function mountJar(root, n, drop = false) {
+  const body = root.querySelector(".jar-body");
+  const jar = root.querySelector(".jar");
+  StarJar.mount(body, n, {
+    drop,
+    onLand: () => { Sfx.good(); jar.classList.remove("wobble"); void jar.offsetWidth; jar.classList.add("wobble"); confetti(); },
+  });
+  const btn = root.querySelector(".shake-on");
+  if (btn) btn.onclick = async () => {
+    const ok = await StarJar.enableShake();
+    btn.textContent = ok ? "✓ Đã bật, bé lắc thử đi!" : "Chưa được phép lắc";
+    btn.disabled = true;
+  };
 }
 
 routes.reward = (drop = false) => {
   $app.appendChild(tabHeader("Phần thưởng"));
   const n = Challenge.stars, G = Challenge.GOAL, full = n >= G;
   const wrap = h(`<div class="reward">
-    ${jarHTML(n, drop)}
+    ${jarHTML(n)}
     <p class="jar-count">Bé đã có <b>${n}</b> ngôi sao${full ? "!" : ` · còn <b>${G - n}</b> sao nữa`}</p>
     <div class="reward-box">🎁 Đủ ${G} sao bé được: <b>${esc(Challenge.reward)}</b>
       ${full ? `<br><span class="ch-full-inline">🎉 Bé đã đủ sao! Nhận thưởng vào thứ 7 (${Challenge.rewardDayText}) nhé!</span>` : ""}</div>
@@ -691,8 +701,8 @@ routes.reward = (drop = false) => {
     <p class="hint center">Mỗi ngày làm xong thử thách, bé được thả 1 ngôi sao vào lọ.</p>
   </div>`);
   $app.appendChild(wrap);
-  if (drop) playJarDrop(wrap);
-  else if (full) confetti();
+  mountJar(wrap, n, drop);
+  if (!drop && full) confetti();
 };
 
 /** Bấm nút thử thách ở Trang chính */
@@ -850,11 +860,12 @@ routes.challengePlay = (practice) => {
     body.innerHTML = `<div class="finish">
       <h2>Bé làm xong ${T} câu! Đúng ngay ${score} câu.</h2>
       ${gotStar ? `<p class="ch-got">Bé nhận được 1 ngôi sao!</p>` : ""}
-      ${jarHTML(Challenge.stars, gotStar)}
+      ${jarHTML(Challenge.stars)}
       ${full ? `<div class="ch-full">🎁 Bé đã đủ ${Challenge.GOAL} sao! Phần thưởng: <b>${esc(Challenge.reward)}</b><br>Bé nhận thưởng vào thứ 7 (${Challenge.rewardDayText}) nhé!</div>`
         : `<p class="hint">Còn ${Challenge.GOAL - Challenge.stars} sao nữa là bé có quà 🎁</p>`}
       <button class="primary home-btn">Về trang chính</button></div>`;
-    if (gotStar) playJarDrop(body); else confetti();
+    mountJar(body, Challenge.stars, gotStar);
+    if (!gotStar) confetti();
     Speech.speak(gotStar
       ? (full ? `Hoan hô! Bé đã đủ ${Challenge.GOAL} ngôi sao. Bé được nhận phần thưởng!` : `Giỏi quá! Bé nhận được một ngôi sao. Bé đã có ${Challenge.stars} ngôi sao.`)
       : `Bé làm xong rồi, đúng ${score} câu. Giỏi lắm!`);
