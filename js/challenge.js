@@ -127,6 +127,16 @@ const Challenge = (() => {
       st = defaults(); st.reward = reward; st.roundStart = dateKey(lastSaturday()); save();
       localStorage.setItem("bap-challenge-reset-1", "1");
     }
+    // Bố mẹ muốn thử: đặt sẵn 19 sao (chỉ MỘT lần trên mỗi máy).
+    // Hôm nay chưa tính là đã làm, để bé làm xong thử thách sẽ được sao thứ 20.
+    if (!localStorage.getItem("bap-test-19-sao")) {
+      st.stars = 19; st.fullDate = null;
+      if (st.roundStart > dateKey()) st.roundStart = dateKey(lastSaturday());
+      delete st.days[dateKey()];
+      if (st.today && st.today.date !== dateKey()) st.today = null;
+      save();
+      localStorage.setItem("bap-test-19-sao", "1");
+    }
   } catch {}
 
   /** Hôm nay đã được tính sao chưa (vòng mới bắt đầu từ thứ 7) */
