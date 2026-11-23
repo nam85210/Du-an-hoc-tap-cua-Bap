@@ -57,7 +57,6 @@ const VN = (() => {
     ["ng", "ngờ"], ["nh", "nhờ"], ["ch", "chờ"], ["c", "cờ"], ["m", "mờ"], ["n", "nờ"],
     ["p", "pờ"], ["t", "tờ"], ["i", "i"], ["y", "i"], ["o", "o"], ["u", "u"],
   ];
-  // Cách đọc một nguyên âm đứng riêng
   // Cách đọc một nguyên âm đứng riêng.
   // "ă", "â" để nguyên chữ cái: giọng đọc sẽ đọc đúng tên chữ (á, ớ).
   // Nếu đưa "á"/"ớ" thì máy đọc tách thành "a sắc"/"ơ sắc" -> sai.
@@ -72,8 +71,8 @@ const VN = (() => {
     for (const [f, sayF] of FINALS) {
       if (rhyme.endsWith(f) && rhyme.length > f.length) {
         const nucleus = rhyme.slice(0, -f.length);
-        const vowelFinal = "iyou".includes(f);
-        return [{ show: nucleus, say: sayChunk(nucleus) }, { show: vowelFinal ? f : sayF, say: sayF }];
+        // Hiện đúng chữ cái (m, ng, y...), máy đọc theo âm (mờ, ngờ, i...)
+        return [{ show: nucleus, say: sayChunk(nucleus) }, { show: f, say: sayF }];
       }
     }
     // vần chỉ có nguyên âm đôi (oa, ua, ưa, ia...): tách nguyên âm đầu
@@ -82,8 +81,9 @@ const VN = (() => {
 
   /**
    * Kế hoạch đánh vần 1 tiếng (đánh vần vần trước, rồi ghép phụ âm):
-   *  "cam" -> a – mờ – am – cờ – am – cam
-   *  "bà"  -> bờ – a – ba – huyền – bà
+   *  "cam" -> a – m – am – c – am – cam   (máy đọc: a – mờ – am – cờ – am – cam)
+   *  "cây" -> â – y – ây – c – ây – cây   (máy đọc: ớ – i – ây – cờ – ây – cây)
+   *  "bà"  -> b – a – ba – huyền – bà
    *  "ổi"  -> ô – i – ôi – hỏi – ổi
    * Mỗi bước: { show: chữ hiện, say: chữ đọc, part: "rh" (vần) | "on" (phụ âm) | "all" (cả tiếng) }
    */
@@ -94,7 +94,8 @@ const VN = (() => {
     parts.forEach((p) => plan.push({ ...p, part: "rh" }));
     if (parts.length) plan.push({ show: a.rhyme, say: a.rhyme, part: "rh" });
     if (a.onset) {
-      plan.push({ show: a.onsetName, say: a.onsetName, part: "on" });
+      // Hiện chữ cái phụ âm (c, ch, ngh...), máy đọc theo âm (cờ, chờ, ngờ...)
+      plan.push({ show: a.onset, say: a.onsetName, part: "on" });
       if (!parts.length) plan.push({ show: a.rhyme, say: sayChunk(a.rhyme), part: "rh" });
       else plan.push({ show: a.rhyme, say: a.rhyme, part: "rh" });
       plan.push({ show: a.plain, say: a.plain, part: "all" });

@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "11 · sửa đánh vần â, ă"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "12 · đánh vần hiện chữ cái"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
