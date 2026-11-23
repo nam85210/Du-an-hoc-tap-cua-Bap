@@ -1,6 +1,6 @@
 // Lưu tạm các file để app mở được cả khi mạng yếu.
 // Mỗi lần sửa code: tăng APP_VERSION ở đây VÀ trong js/app.js, index.html (?v=...).
-const APP_VERSION = "11";
+const APP_VERSION = "12";
 const CACHE = "bap-hoc-vui-v" + APP_VERSION;
 const FILES = [
   "./", "./index.html", "./css/style.css", "./manifest.webmanifest",
