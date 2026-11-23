@@ -454,4 +454,3 @@ body.has-tabs #app { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
 .jar-label { z-index: 2; }
 .jar-shine { z-index: 1; opacity: .8; }
 .shake-hint { margin: 2px 0 0; font-size: 15px; }
-.shake-on { font-size: 17px; padding: 10px 20px; }
