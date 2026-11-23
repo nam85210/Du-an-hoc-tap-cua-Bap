@@ -34,7 +34,7 @@ mở toàn màn hình như ứng dụng thật. Không cần lên CH Play / App 
    - `bà` → **b – a – ba – huyền – bà** (máy đọc: bờ – a – ba – huyền – bà)
    - `cam` → **a – m – am – c – am – cam** (máy đọc: a – mờ – am – cờ – am – cam)
    - `cây` → **â – y – ây – c – ây – cây** (máy đọc: ớ – i – ây – cờ – ây – cây)
-   - `con gà` → **o – nờ – on – cờ – on – con** / **gờ – a – ga – huyền – gà**
+   - `con gà` → **o – n – on – c – on – con** / **g – a – ga – huyền – gà**
 5. **🐢 Đánh vần**: máy đánh vần chậm, chữ đang đọc sáng lên màu vàng.
 6. **🎤 Bé đọc**: máy lắng nghe bé đọc rồi chấm:
    - ✅ **Đúng** → dấu tích xanh, khen bé, pháo hoa, bé được ⭐.
