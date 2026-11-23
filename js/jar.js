@@ -167,8 +167,22 @@ const StarJar = (() => {
     listen();
     return true;
   }
-  // Android/máy không cần xin quyền: nghe luôn
-  if (typeof window !== "undefined" && "DeviceMotionEvent" in window && !needsPermission()) listen();
+  if (typeof window !== "undefined" && "DeviceMotionEvent" in window) {
+    if (!needsPermission()) {
+      // Android/máy không cần xin quyền: luôn nghe cảm biến
+      listen();
+    } else {
+      // iPhone: tự xin quyền ở lần chạm ĐẦU TIÊN vào app (bất kỳ chỗ nào).
+      // Đã cho phép rồi thì máy không hỏi lại, cảm biến luôn bật.
+      const once = () => {
+        document.removeEventListener("touchend", once, true);
+        document.removeEventListener("click", once, true);
+        enableShake();
+      };
+      document.addEventListener("touchend", once, true);
+      document.addEventListener("click", once, true);
+    }
+  }
 
-  return { mount, enableShake, needsPermission: () => needsPermission() && !listening };
+  return { mount, enableShake, get listening() { return listening; } };
 })();

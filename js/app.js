@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "14 · thử 19 sao"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "15 · luôn cảm biến lắc"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -668,8 +668,7 @@ function jarHTML(n) {
       <div class="jar-body"><div class="jar-shine"></div>
         <div class="jar-label">${n}/${Challenge.GOAL}</div></div>
     </div></div>
-    ${n ? `<p class="hint center shake-hint">Lắc điện thoại hoặc chạm vào lọ để xáo sao ✨</p>
-    ${StarJar.needsPermission() ? '<button class="primary shake-on">📳 Bật lắc lọ</button>' : ""}` : ""}`;
+    ${n ? `<p class="hint center shake-hint">Lắc điện thoại hoặc chạm vào lọ để xáo sao ✨</p>` : ""}`;
 }
 /** Đổ sao vào lọ (sao nằm lộn xộn); drop = ngôi sao mới rơi vào */
 function mountJar(root, n, drop = false) {
@@ -679,12 +678,6 @@ function mountJar(root, n, drop = false) {
     drop,
     onLand: () => { Sfx.good(); jar.classList.remove("wobble"); void jar.offsetWidth; jar.classList.add("wobble"); confetti(); },
   });
-  const btn = root.querySelector(".shake-on");
-  if (btn) btn.onclick = async () => {
-    const ok = await StarJar.enableShake();
-    btn.textContent = ok ? "✓ Đã bật, bé lắc thử đi!" : "Chưa được phép lắc";
-    btn.disabled = true;
-  };
 }
 
 routes.reward = (drop = false) => {
