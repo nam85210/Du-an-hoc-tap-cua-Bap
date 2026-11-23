@@ -2,7 +2,7 @@
 //  GIAO DIỆN ỨNG DỤNG "BẮP HỌC VUI"
 // =============================================================
 
-const APP_VERSION = "13 · lắc lọ sao"; // tăng số này mỗi lần cập nhật
+const APP_VERSION = "14 · thử 19 sao"; // tăng số này mỗi lần cập nhật
 const $app = document.getElementById("app");
 const h = (html) => { const t = document.createElement("template"); t.innerHTML = html.trim(); return t.content.firstElementChild; };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
